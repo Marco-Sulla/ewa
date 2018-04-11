@@ -1,5 +1,5 @@
 import sqlalchemy.engine
-import lib.msutils as msutils
+import mylib.msutils as msutils
 import configparser
 from pathlib import Path
 import os
@@ -129,13 +129,18 @@ biginteger = False
 col_types = {}
 import_date_eff = ""
 
+if dtype == "mssql":
+    converter = convertMsSqlToJavaType
+else:
+    raise Exception("Unsupported database: " + dtype)
+
 for row in rows:
     col = row[0].upper()
     ctype = row[1]
     prec = row[2]
     radix = row[3]
     scale = row[4]
-    jtype = convertMsSqlToJavaType(
+    jtype = converter(
         ctype, 
         prec, 
         radix, 

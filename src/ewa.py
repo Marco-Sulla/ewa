@@ -124,7 +124,8 @@ get_columns_data_sql_mssql = """SELECT
     numeric_precision_radix,
     numeric_scale
 FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = N'{}'"""
+WHERE TABLE_NAME = N'{}'
+ORDER BY column_name ASC"""
 
 rows = engine.execute(get_columns_data_sql_mssql.format(table_name))
 
@@ -185,7 +186,7 @@ if biginteger:
 imports += import_date_eff
 
 if imports:
-    imports += "\n" + imports + "\n"
+    imports = "\n" + imports + "\n"
 
 res += class_start.format(imports=imports, class_name=class_name, pack_model=pack_model) + "\n"
 res += fields + "\n\n" + methods.rstrip() + "\n" + class_end
@@ -288,6 +289,9 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {insert_params}
 {indent}{indent}{indent}BigDecimal res = (BigDecimal) query.executeUpdate().getKey();
 {indent}{indent}{indent}con.commit();
+{indent}{indent}{indent}if (res == null) {{
+{indent}{indent}{indent}{indent}return null;
+{indent}{indent}{indent}}}
 {indent}{indent}{indent}return res.longValue();
 {indent}{indent}}}
 {indent}{indent}finally {{
@@ -345,8 +349,6 @@ save = """
 {indent}{indent}{indent}"""
 
 update_tpl = """
-{indent}{indent}{indent}return null;
-{indent}{indent}}}
 {indent}@Override
 {indent}public void update({name} {varname}) {{
 {indent}{indent}logger.debug("{name}Repository.update()");
@@ -396,7 +398,7 @@ for id in ids:
     idsfirm += "{} {}, ".format(col_type, id.lower())
     idslog += '{varid}: " + {varid} + "'.format(varid=varid)
     
-    idswhere += '"{indent}{indent}{indent}{indent}{id} = :{varid} and " + \n'.format(
+    idswhere += '{indent}{indent}{indent}{indent}"{id} = :{varid} and " + \n'.format(
         indent = indent, 
         id = id, 
         varid = varid
@@ -424,7 +426,7 @@ idslist = idslist[:-2]
 if multiple_ids:
     methid = "Ids"
 else:
-    methid = ids[0].upper() + ids[0][1:].lower()
+    methid = ids[0][0].upper() + ids[0][1:].lower()
 
 imports = "import java.math.BigDecimal;\n"
 

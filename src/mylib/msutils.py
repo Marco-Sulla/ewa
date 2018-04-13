@@ -13,6 +13,15 @@ from pathlib import Path
 import json
 import cmath
 
+ispymssql = False
+
+try:
+    import pymssql
+    ispymssql = True
+except ModuleNotFoundError:
+    pass
+    
+
 iso_fmt_file = "YYYY-MM-DDTHH-mm-ssZ"
 number_re = r"([-+]?\d+(\.\d+)?([eE][-+]?\d+)?)|\bNaN\b|\bnan\b|\bNan\b"
 
@@ -269,7 +278,10 @@ def dbString(dtype, user, password, host, port, db_name):
     elif dtype == "postgres":
         type_verb = "postgresql"
     elif dtype == "mssql":
-        type_verb = "mssql+pymssql"
+        if ispymssql:
+            type_verb = "mssql+pymssql"
+        else:
+            type_verb = "mssql+pyodbc"
     else:
         raise RuntimeError("Unsupported db type: {t}".format(t=dtype))
     
@@ -279,6 +291,9 @@ def dbString(dtype, user, password, host, port, db_name):
                   "(CONNECT_DATA=(SERVICE_NAME = {d})))")
     else:
         db_tpl = "{t}://{u}:{pw}@{h}:{po}/{d}"
+    
+    if dtype == "mssql" and not ispymssql:
+        db_tpl += "?driver=Microsoft+ODBC+Driver+for+SQL+Server"
     
     return db_tpl.format(
         t = type_verb,

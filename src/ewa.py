@@ -29,8 +29,16 @@ config.read(str(config_path))
 
 class_name = config.get("default", "class_name") # TODO support multiple
 table_name = config.get("default", "table_name").upper()
-ids = config.get("default", "ids").upper()
-tid = ids # TODO support multiple
+ids = config.get("default", "ids").upper().split(",")
+
+for i in range(len(ids)):
+    ids[i] = ids[i].strip()
+
+multiple_ids = False
+
+if len(ids) > 1:
+    multiple_ids = True
+
 integer_instead_of_short = bool(int(config.get("default", "integer_instead_of_short")))
 bigdecimal_instead_of_double = bool(int(config.get("default", "bigdecimal_instead_of_double")))
 biginteger_instead_of_long = bool(int(config.get("default", "biginteger_instead_of_long")))
@@ -87,9 +95,7 @@ def convertMsSqlToJavaType(
 
         
 class_start = """package {pack_model};
-
 {imports}
-
 public class {class_name} {{"""
 
 class_end = "}"
@@ -178,6 +184,9 @@ if biginteger:
 
 imports += import_date_eff
 
+if imports:
+    imports += "\n" + imports + "\n"
+
 res += class_start.format(imports=imports, class_name=class_name, pack_model=pack_model) + "\n"
 res += fields + "\n\n" + methods.rstrip() + "\n" + class_end
 
@@ -195,9 +204,7 @@ with open(str(model_path), mode="w+") as f:
 
 
 repo = """package {pack_repo};
-
 {imports}
-
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -223,15 +230,18 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}private Sql2o sql2o;
 {indent}
 {indent}@Override
-{indent}public {name} getBy{methid}({idtype} {varid}) {{
-{indent}{indent}logger.debug("{name}Repository.getBy{methid}(): " + {varid});
+{indent}public {name} getBy{methid}({idsfirm}) {{
+{indent}{indent}logger.debug("{name}Repository.getBy{methid}(): {idslog});
 {indent}{indent}
-{indent}{indent}String sql = selectBase + "from {table_name} {initial} where {tid} = :{varid}";
+{indent}{indent}String sql = (
+{indent}{indent}{indent}selectBase + "from {table_name} {initial} " + 
+{idswhere}
+);
 {indent}{indent}Query query = null;
 {indent}{indent}
 {indent}{indent}try (Connection con = sql2o.open()) {{
 {indent}{indent}{indent}query = con.createQuery(sql);
-{indent}{indent}{indent}query.addParameter("{varid}", {varid});
+{idsparams}
 {indent}{indent}{indent}return query.executeAndFetchFirst({name}.class);
 {indent}{indent}}}
 {indent}{indent}finally {{
@@ -287,13 +297,63 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}}}
 {indent}}}
 {indent}
+{update}
+{indent}@Override
+{indent}public Long save({name} {varname}) {{
+{idsinit}
+{indent}{indent}{name} {varname}2 = this.getBy{methid}({idslist});
+{indent}{indent}
+{indent}{indent}if ({varname}2 == null) {{
+{indent}{indent}{indent}return this.insert({varname});
+{indent}{indent}}}
+{indent}{indent}else {{"""
+
+
+repo2 = """
+{indent}{indent}{indent}return null;
+{indent}{indent}}}
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public void delete({idsfirm}) {{
+{indent}{indent}logger.debug("{name}Repository.delete() : {idslog});
+{indent}{indent}String sql = (
+{indent}{indent}{indent}"delete from {table_name} " + 
+{idswhere}
+{indent}{indent});
+{indent}{indent}
+{indent}{indent}Query query = null;
+{indent}{indent}
+{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
+{indent}{indent}{indent}query = con.createQuery(sql);
+{idsparams}
+{indent}{indent}{indent}query.executeUpdate();
+{indent}{indent}{indent}con.commit();
+{indent}{indent}}}
+{indent}{indent}finally {{
+{indent}{indent}{indent}if (query != null) {{
+{indent}{indent}{indent}{indent}query.close();
+{indent}{indent}{indent}}}
+{indent}{indent}}}
+{indent}}}
+}}
+
+"""
+
+save = """
+{indent}{indent}{indent}this.update({varname});
+{indent}{indent}{indent}"""
+
+update_tpl = """
+{indent}{indent}{indent}return null;
+{indent}{indent}}}
 {indent}@Override
 {indent}public void update({name} {varname}) {{
 {indent}{indent}logger.debug("{name}Repository.update()");
 {indent}{indent}String sql = (
 {indent}{indent}{indent}"update {table_name} set " + 
 {update_fields}
-{indent}{indent}{indent}"where {tid} = :{varid} " 
+{idswhere}
 {indent}{indent});
 {indent}{indent}
 {indent}{indent}Query query = null;
@@ -310,64 +370,82 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}{indent}}}
 {indent}{indent}}}
 {indent}}}
-{indent}
-{indent}@Override
-{indent}public Long save({name} {varname}) {{
-{indent}{indent}{name} {varname}2 = this.getBy{methid}({varname}.get{methid}());
-{indent}{indent}
-{indent}{indent}if ({varname}2 == null) {{
-{indent}{indent}{indent}return this.insert({varname});
-{indent}{indent}}}
-{indent}{indent}else {{
-{indent}{indent}{indent}this.update({varname});
-{indent}{indent}{indent}
-{indent}{indent}{indent}return {varname}2.get{methid}();
-{indent}{indent}}}
-{indent}}}
-{indent}
-{indent}@Override
-{indent}public void delete({idtype} {varid}) {{
-{indent}{indent}logger.debug("{name}Repository.delete() {varid}: " + {varid});
-{indent}{indent}String sql = (
-{indent}{indent}{indent}"delete from {table_name} " + 
-{indent}{indent}{indent}"where {tid} = :{varid} " 
-{indent}{indent});
-{indent}{indent}
-{indent}{indent}Query query = null;
-{indent}{indent}
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}query = con.createQuery(sql);
-{indent}{indent}{indent}query.addParameter("{varid}", {varid});
-{indent}{indent}{indent}query.executeUpdate();
-{indent}{indent}{indent}con.commit();
-{indent}{indent}}}
-{indent}{indent}finally {{
-{indent}{indent}{indent}if (query != null) {{
-{indent}{indent}{indent}{indent}query.close();
-{indent}{indent}{indent}}}
-{indent}{indent}}}
-{indent}}}
-}}
-
-"""
+{indent}"""
 
 varname = class_name[0].lower() + class_name[1:]
 initial = varname[0]
-varid = tid.lower()
-methid = varid[0].upper() + varid[1:]
-idtype = col_types[tid]
-imports = "import java.math.BigDecimal;"
+
+
+
+idsfirm = ""
+idslog = ""
+idswhere = '"{indent}{indent}{indent}where " + \n'.format(indent=indent)
+idsinit = ""
+idsparams = ""
+idslist = ""
+idshasdate = False
+
+for id in ids:
+    col_type = col_types[id]
+    varid = id.lower()
+    methid = id[0] + id[1:].lower()
+    
+    if col_type == "Date":
+        idshasdate = True
+    
+    idsfirm += "{} {}, ".format(col_type, id.lower())
+    idslog += '{varid}: " + {varid} + "'.format(varid=varid)
+    
+    idswhere += '"{indent}{indent}{indent}{indent}{id} = :{varid} and " + \n'.format(
+        indent = indent, 
+        id = id, 
+        varid = varid
+    )
+    
+    idsinit += '{indent}{indent}{col_type} {varid} = {varname}.get{methid}();\n'.format(
+        indent = indent, 
+        col_type = col_type,
+        varid = varid,
+        varname = varname,
+        methid = methid
+    )
+    
+    idsparams += '{indent}{indent}{indent}query.addParameter("{varid}", {varid});\n'.format(indent=indent, varid=id.lower())
+    
+    idslist += "{}, ".format(varid)
+
+idsfirm = idsfirm[:-2]
+idslog = idslog[:-4]
+idswhere = idswhere[:-9] + '"'
+idslist = idslist[:-2]
+
+
+
+if multiple_ids:
+    methid = "Ids"
+else:
+    methid = ids[0].upper() + ids[0][1:].lower()
+
+imports = "import java.math.BigDecimal;\n"
 
 import_date_eff = ""
 
-if idtype == "Date":
+
+if idshasdate:
     import_date_eff = import_date + "\n"
+    imports += import_date_eff
+
+if imports:
+    imports = "\n" + imports + "\n"
+    
 
 select_fields = ""
 insert_fields = ""
 insert_vars = ""
 insert_params = ""
 update_fields = ""
+
+noupdate = True
 
 for col in col_types:
     colname = col.lower()
@@ -386,10 +464,13 @@ for col in col_types:
         )
     )
     
-    update_fields += (
-        indent + indent + indent + indent + 
-        '"{col} = :{colname}, " +\n'.format(col=col, colname=colname)
-    )
+    if col not in ids:
+        noupdate = False
+        
+        update_fields += (
+            indent + indent + indent + indent + 
+            '"{col} = :{colname}, " +\n'.format(col=col, colname=colname)
+        )
 
 select_fields = select_fields[:-7] + ' "'
 insert_fields = insert_fields[:-7] + ' " + '
@@ -397,15 +478,34 @@ insert_vars = insert_vars[:-7] + ' " + '
 update_fields = update_fields[:-6] + ' " + '
 
 
+if noupdate:
+    update = ""
+    repo += repo2
+else:
+    update = update_tpl.format(
+        indent = indent, 
+        idswhere = idswhere, 
+        name = class_name, 
+        table_name = table_name, 
+        update_fields = update_fields, 
+        varname = varname, 
+        update_params = insert_params
+    )
+    
+    repo += save + repo2
+
 repo_res = repo.format(
     indent = indent, 
-    imports = imports + import_date_eff, 
+    imports = imports, 
     name = class_name, 
     methid = methid, 
-    idtype = idtype,
-    varid = varid,
+    idsfirm = idsfirm,
+    idslog = idslog, 
+    idswhere = idswhere, 
+    idsparams = idsparams, 
+    idsinit = idsinit,
+    idslist = idslist, 
     table_name = table_name,
-    tid = tid,
     varname = varname,
     select_fields = select_fields,
     insert_fields = insert_fields,
@@ -415,7 +515,8 @@ repo_res = repo.format(
     update_fields = update_fields,
     initial = initial,
     pack_model = pack_model,
-    pack_repo = pack_repo
+    pack_repo = pack_repo,
+    update = update
 )
 
 repo_dir = data_dir / pack_repo.replace(".", "/")
@@ -427,40 +528,51 @@ with open(str(repo_path), mode="w+") as f:
 
 
 repoint = """package {pack_repo};
-
 {imports}
-
 import java.util.List;
 
 import {pack_model}.{class_name};
 
 public interface {class_name}Repository {{
 
-{indent}{class_name} getBy{methid}({idtype} {varid});
+{indent}{class_name} getBy{methid}({idsfirm});
 {indent}
 {indent}Long insert({class_name} {varname});
-{indent}
-{indent}void update({class_name} {varname});
+{update}
 {indent}
 {indent}Long save({class_name} {varname});
 {indent}
 {indent}List<{class_name}> getAll();
 {indent}
-{indent}void delete({idtype} {varid});
+{indent}void delete({idsfirm});
 }}
 
 """
 
+update_tpl = """
+{indent}
+{indent}void update({class_name} {varname});"""
+
+if noupdate:
+    update = ""
+else:
+    update = update_tpl.format(indent=indent, class_name=class_name, varname=varname)
+
+imports = ""
+
+if import_date_eff:
+    imports = "\n" + import_date_eff + "\n"
+
 repoint_res = repoint.format(
-    imports = import_date_eff,
+    imports = imports,
     class_name = class_name,
     varname = varname,
     methid = methid,
-    varid = varid,
     indent = indent,
-    idtype = idtype,
+    idsfirm = idsfirm,
     pack_repo = pack_repo,
-    pack_model = pack_model
+    pack_model = pack_model,
+    update = update
 )
 
 repoint_path = repo_dir / (class_name + "Repository.java")
@@ -470,9 +582,7 @@ with open(str(repoint_path), mode="w+") as f:
 
 
 service = """package {pack_service};
-
 {imports}
-
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -487,25 +597,38 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}@Autowired
 {indent}private {class_name}Repository {varname}Repository;
 {indent}
-{indent}@Override
-{indent}public List<{class_name}> getAll() {{
-{indent}{indent}return {varname}Repository.getAll();
+{indent}private void enrich({class_name} {varname}) {{
+{indent}{indent}if ({varname} != null) {{
+{indent}{indent}{indent} // TODO add implementation
+{indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} getBy{methid}({idtype} {varid}) {{
-{indent}{indent}return {varname}Repository.getBy{methid}({varid});
+{indent}public List<{class_name}> getAll() {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getAll();
+{indent}{indent}
+{indent}{indent}if ({varname}s != null) {{
+{indent}{indent}{indent}for ({class_name} {varname}: {varname}s) {{
+{indent}{indent}{indent}{indent}this.enrich({varname});
+{indent}{indent}{indent}}}
+{indent}{indent}}}
+{indent}{indent}
+{indent}{indent}return {varname}s;
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public {class_name} getBy{methid}({idsfirm}) {{
+{indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist});
+{indent}{indent}this.enrich({varname});
+{indent}{indent}
+{indent}{indent}return {varname};
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public Long insert({class_name} {varname}) {{
 {indent}{indent}return {varname}Repository.insert({varname});
 {indent}}}
-{indent}
-{indent}@Override
-{indent}public void update({class_name} {varname}) {{
-{indent}{indent}{varname}Repository.update({varname});
-{indent}}}
+{update}
 {indent}
 {indent}@Override
 {indent}public Long save({class_name} {varname}) {{
@@ -513,24 +636,37 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void delete({idtype} {varid}) {{
-{indent}{indent}{varname}Repository.delete({varid});
+{indent}public void delete({idsfirm}) {{
+{indent}{indent}{varname}Repository.delete({idslist});
 {indent}}}
 }}
 
 """
 
+update_tpl = """
+{indent}
+{indent}@Override
+{indent}public void update({class_name} {varname}) {{
+{indent}{indent}{varname}Repository.update({varname});
+{indent}}}"""
+
+if noupdate:
+    update = ""
+else:
+    update = update_tpl.format(indent=indent, class_name=class_name, varname=varname)
+
 service_res = service.format(
-    imports = import_date_eff,
+    imports = imports,
     class_name = class_name,
     varname = varname,
+    idsfirm = idsfirm,
+    idslist = idslist,
     methid = methid,
-    varid = varid,
     indent = indent,
-    idtype = idtype,
     pack_model = pack_model,
     pack_repo = pack_repo,
-    pack_service = pack_service
+    pack_service = pack_service,
+    update = update
 )
 
 service_dir = data_dir / pack_service.replace(".", "/")
@@ -542,40 +678,47 @@ with open(str(service_path), mode="w+") as f:
 
 
 serviceint = """package {pack_service};
-
 {imports}
-
 import java.util.List;
 
 import {pack_model}.{class_name};
 
 public interface {class_name}Service {{
 {indent}
-{indent}{class_name} getBy{methid}({idtype} {varid});
+{indent}{class_name} getBy{methid}({idsfirm});
 {indent}
 {indent}Long insert({class_name} {varname});
-{indent}
-{indent}void update({class_name} {varname});
+{update}
 {indent}
 {indent}Long save({class_name} {varname});
 {indent}
 {indent}List<{class_name}> getAll();
 {indent}
-{indent}void delete({idtype} {varid});
+{indent}void delete({idsfirm});
 }}
 
 """
 
+update_tpl = """
+{indent}
+{indent}void update({class_name} {varname});"""
+
+if noupdate:
+    update = ""
+else:
+    update = update_tpl.format(indent=indent, class_name=class_name, varname=varname)
+
+
 serviceint_res = serviceint.format(
-    imports = import_date_eff,
+    imports = imports,
     class_name = class_name,
     varname = varname,
     methid = methid,
-    varid = varid,
+    idsfirm = idsfirm,
     indent = indent,
-    idtype = idtype,
     pack_service = pack_service,
-    pack_model = pack_model
+    pack_model = pack_model,
+    update = update
 )
 
 serviceint_path = service_dir / (class_name + "Service.java")
@@ -587,6 +730,6 @@ with open(str(serviceint_path), mode="w+") as f:
 print("Files saved in " + str(data_dir))
 print(
     "!!!IMPORTANT!!! Please check the insert and update methods in repo, " + 
-    "in particular for id as parameter"
+    "in particular for autoincrement columns as parameter"
 )
 

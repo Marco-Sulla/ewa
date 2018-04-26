@@ -231,47 +231,47 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}private Sql2o sql2o;
 {indent}
 {indent}@Override
-{indent}public {name} getBy{methid}({idsfirm}) {{
+{indent}public {name} getBy{methid}({idsfirm}, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.getBy{methid}(): {idslog});
 {indent}{indent}
 {indent}{indent}String sql = (
 {indent}{indent}{indent}selectBase + "from {table_name} {initial} " + 
 {idswhere}
-);
-{indent}{indent}Query query = null;
-{indent}{indent}
-{indent}{indent}try (Connection con = sql2o.open()) {{
-{indent}{indent}{indent}query = con.createQuery(sql);
+{indent}{indent});
+{indent}{indent}Query query = con.createQuery(sql);
 {idsparams}
-{indent}{indent}{indent}return query.executeAndFetchFirst({name}.class);
+{indent}{indent}{name} res = query.executeAndFetchFirst({name}.class);
+{indent}{indent}query.close();
+{indent}{indent}return res;
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public {name} getBy{methid}({idsfirm}) {{
+{indent}{indent}try (Connection con = sql2o.open()) {{
+{indent}{indent}{indent}return this.getBy{methid}({idslist}, con);
 {indent}{indent}}}
-{indent}{indent}finally {{
-{indent}{indent}{indent}if (query != null) {{
-{indent}{indent}{indent}{indent}query.close();
-{indent}{indent}{indent}}}
-{indent}{indent}}}
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public List<{name}> getAll(Connection con) {{
+{indent}{indent}logger.debug("{name}Repository.getAll()");
+{indent}{indent}
+{indent}{indent}String sql = selectBase + "from {table_name} {initial} ";
+{indent}{indent}Query query = con.createQuery(sql);
+{indent}{indent}List<{name}> res = query.executeAndFetch({name}.class);
+{indent}{indent}query.close();
+{indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{name}> getAll() {{
-{indent}{indent}logger.debug("{name}Repository.getAll()");
-{indent}{indent}
-{indent}{indent}String sql = selectBase + "from {table_name} {initial} ";
-{indent}{indent}Query query = null;
-{indent}{indent}
 {indent}{indent}try (Connection con = sql2o.open()) {{
-{indent}{indent}{indent}query = con.createQuery(sql);
-{indent}{indent}{indent}return query.executeAndFetch({name}.class);
-{indent}{indent}}}
-{indent}{indent}finally {{
-{indent}{indent}{indent}if (query != null) {{
-{indent}{indent}{indent}{indent}query.close();
-{indent}{indent}{indent}}}
+{indent}{indent}{indent}return this.getAll(con);
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Long insert({name} {varname}) {{
+{indent}public Long insert({name} {varname}, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.insert()");
 {indent}{indent}String sql = (
 {indent}{indent}{indent}"insert into {table_name} ( " + 
@@ -282,94 +282,99 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}{indent}")"
 {indent}{indent});
 {indent}{indent}
-{indent}{indent}Query query = null;
-{indent}{indent}
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}query = con.createQuery(sql);
+{indent}{indent}Query query = con.createQuery(sql);
 {insert_params}
-{indent}{indent}{indent}BigDecimal res = (BigDecimal) query.executeUpdate().getKey();
-{indent}{indent}{indent}con.commit();
-{indent}{indent}{indent}if (res == null) {{
-{indent}{indent}{indent}{indent}return null;
-{indent}{indent}{indent}}}
-{indent}{indent}{indent}return res.longValue();
+{indent}{indent}BigDecimal res = (BigDecimal) query.executeUpdate().getKey();
+{indent}{indent}query.close();
+{indent}{indent}
+{indent}{indent}if (res == null) {{
+{indent}{indent}{indent}return null;
 {indent}{indent}}}
-{indent}{indent}finally {{
-{indent}{indent}{indent}if (query != null) {{
-{indent}{indent}{indent}{indent}query.close();
-{indent}{indent}{indent}}}
+{indent}{indent}
+{indent}{indent}return res.longValue();
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public Long insert({name} {varname}) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
+{indent}{indent}{indent}Long res = this.insert({varname}, con);
+{indent}{indent}{indent}con.commit();
+{indent}{indent}{indent}return res;
 {indent}{indent}}}
 {indent}}}
 {indent}
 {update}
 {indent}@Override
-{indent}public Long save({name} {varname}) {{
+{indent}public Long save({name} {varname}, Connection con) {{
 {idsinit}
-{indent}{indent}{name} {varname}2 = this.getBy{methid}({idslist});
+{indent}{indent}{name} {varname}2 = this.getBy{methid}({idslist}, con);
 {indent}{indent}
 {indent}{indent}if ({varname}2 == null) {{
-{indent}{indent}{indent}return this.insert({varname});
+{indent}{indent}{indent}return this.insert({varname}, con);
 {indent}{indent}}}
-{indent}{indent}else {{"""
-
-
-repo2 = """
+{indent}{indent}else {{
+{save}
 {indent}{indent}{indent}return null;
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void delete({idsfirm}) {{
+{indent}public Long save({name} {varname}) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
+{indent}{indent}{indent}Long res = this.save({varname}, con);
+{indent}{indent}{indent}con.commit();
+{indent}{indent}{indent}return res;
+{indent}{indent}}}
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public void delete({idsfirm}, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.delete() : {idslog});
 {indent}{indent}String sql = (
 {indent}{indent}{indent}"delete from {table_name} " + 
 {idswhere}
 {indent}{indent});
 {indent}{indent}
-{indent}{indent}Query query = null;
-{indent}{indent}
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}query = con.createQuery(sql);
+{indent}{indent}Query query = con.createQuery(sql);
 {idsparams}
-{indent}{indent}{indent}query.executeUpdate();
+{indent}{indent}query.executeUpdate();
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public void delete({idsfirm}) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
+{indent}{indent}{indent}this.delete({idslist}, con);
 {indent}{indent}{indent}con.commit();
-{indent}{indent}}}
-{indent}{indent}finally {{
-{indent}{indent}{indent}if (query != null) {{
-{indent}{indent}{indent}{indent}query.close();
-{indent}{indent}{indent}}}
 {indent}{indent}}}
 {indent}}}
 }}
 
 """
 
-save = """
-{indent}{indent}{indent}this.update({varname});
+save_tpl = """{indent}{indent}{indent}this.update({varname}, con);
 {indent}{indent}{indent}"""
 
-update_tpl = """
-{indent}@Override
-{indent}public void update({name} {varname}) {{
+update_tpl = """{indent}@Override
+{indent}public void update({name} {varname}, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.update()");
+{indent}{indent}
 {indent}{indent}String sql = (
 {indent}{indent}{indent}"update {table_name} set " + 
 {update_fields}
 {idswhere}
 {indent}{indent});
 {indent}{indent}
-{indent}{indent}Query query = null;
-{indent}{indent}
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}query = con.createQuery(sql);
+{indent}{indent}Query query = con.createQuery(sql);
 {update_params}
-{indent}{indent}{indent}query.executeUpdate();
+{indent}{indent}query.executeUpdate();
+{indent}{indent}query.close();
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public void update({name} {varname}) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
+{indent}{indent}{indent}this.update({varname}, con);
 {indent}{indent}{indent}con.commit();
-{indent}{indent}}}
-{indent}{indent}finally {{
-{indent}{indent}{indent}if (query != null) {{
-{indent}{indent}{indent}{indent}query.close();
-{indent}{indent}{indent}}}
 {indent}{indent}}}
 {indent}}}
 {indent}"""
@@ -381,7 +386,7 @@ initial = varname[0]
 
 idsfirm = ""
 idslog = ""
-idswhere = '"{indent}{indent}{indent}where " + \n'.format(indent=indent)
+idswhere = '{indent}{indent}{indent}"where " + \n'.format(indent=indent)
 idsinit = ""
 idsparams = ""
 idslist = ""
@@ -412,7 +417,7 @@ for id in ids:
         methid = methid
     )
     
-    idsparams += '{indent}{indent}{indent}query.addParameter("{varid}", {varid});\n'.format(indent=indent, varid=id.lower())
+    idsparams += '{indent}{indent}query.addParameter("{varid}", {varid});\n'.format(indent=indent, varid=id.lower())
     
     idslist += "{}, ".format(varid)
 
@@ -458,7 +463,7 @@ for col in col_types:
     insert_vars += indent + indent + indent + indent + '":{}, " + \n'.format(col.lower())
     
     insert_params += (
-        indent + indent + indent + 
+        indent + indent + 
         'query.addParameter("{colname}", {varname}.get{methcol}());\n'.format(
             colname = colname,
             varname = varname,
@@ -482,7 +487,7 @@ update_fields = update_fields[:-6] + ' " + '
 
 if noupdate:
     update = ""
-    repo += repo2
+    save = ""
 else:
     update = update_tpl.format(
         indent = indent, 
@@ -494,7 +499,10 @@ else:
         update_params = insert_params
     )
     
-    repo += save + repo2
+    save = save_tpl.format(
+        indent = indent, 
+        varname = varname
+    )
 
 repo_res = repo.format(
     indent = indent, 
@@ -518,7 +526,8 @@ repo_res = repo.format(
     initial = initial,
     pack_model = pack_model,
     pack_repo = pack_repo,
-    update = update
+    update = update,
+    save = save
 )
 
 repo_dir = data_dir / pack_repo.replace(".", "/")
@@ -536,22 +545,32 @@ import java.util.List;
 import {pack_model}.{class_name};
 
 public interface {class_name}Repository {{
-
+{indent}{class_name} getBy{methid}({idsfirm}, Connection con);
+{indent}
 {indent}{class_name} getBy{methid}({idsfirm});
+{indent}
+{indent}Long insert({class_name} {varname}, Connection con);
 {indent}
 {indent}Long insert({class_name} {varname});
 {update}
 {indent}
+{indent}Long save({class_name} {varname}, Connection con);
+{indent}
 {indent}Long save({class_name} {varname});
 {indent}
+{indent}List<{class_name}> getAll(Connection con);
+{indent}
 {indent}List<{class_name}> getAll();
+{indent}
+{indent}void delete({idsfirm}, Connection con);
 {indent}
 {indent}void delete({idsfirm});
 }}
 
 """
 
-update_tpl = """
+update_tpl = """{indent}
+{indent}void update({class_name} {varname}, Connection con);
 {indent}
 {indent}void update({class_name} {varname});"""
 
@@ -589,6 +608,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.sql2o.Connection;
 
 import {pack_model}.{class_name};
 import {pack_repo}.{class_name}Repository;
@@ -606,6 +626,19 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
+{indent}public List<{class_name}> getAll(Connection con) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getAll(con);
+{indent}{indent}
+{indent}{indent}if ({varname}s != null) {{
+{indent}{indent}{indent}for ({class_name} {varname}: {varname}s) {{
+{indent}{indent}{indent}{indent}this.enrich({varname});
+{indent}{indent}{indent}}}
+{indent}{indent}}}
+{indent}{indent}
+{indent}{indent}return {varname}s;
+{indent}}}
+{indent}
+{indent}@Override
 {indent}public List<{class_name}> getAll() {{
 {indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getAll();
 {indent}{indent}
@@ -619,11 +652,24 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
+{indent}public {class_name} getBy{methid}({idsfirm}, Connection con) {{
+{indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist}, con);
+{indent}{indent}this.enrich({varname});
+{indent}{indent}
+{indent}{indent}return {varname};
+{indent}}}
+{indent}
+{indent}@Override
 {indent}public {class_name} getBy{methid}({idsfirm}) {{
 {indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist});
 {indent}{indent}this.enrich({varname});
 {indent}{indent}
 {indent}{indent}return {varname};
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public Long insert({class_name} {varname}, Connection con) {{
+{indent}{indent}return {varname}Repository.insert({varname}, con);
 {indent}}}
 {indent}
 {indent}@Override
@@ -633,8 +679,18 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {update}
 {indent}
 {indent}@Override
+{indent}public Long save({class_name} {varname}, Connection con) {{
+{indent}{indent}return {varname}Repository.save({varname}, con);
+{indent}}}
+{indent}
+{indent}@Override
 {indent}public Long save({class_name} {varname}) {{
 {indent}{indent}return {varname}Repository.save({varname});
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public void delete({idsfirm}, Connection con) {{
+{indent}{indent}{varname}Repository.delete({idslist}, con);
 {indent}}}
 {indent}
 {indent}@Override
@@ -646,6 +702,11 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 """
 
 update_tpl = """
+{indent}
+{indent}@Override
+{indent}public void update({class_name} {varname}, Connection con) {{
+{indent}{indent}{varname}Repository.update({varname}, con);
+{indent}}}
 {indent}
 {indent}@Override
 {indent}public void update({class_name} {varname}) {{
@@ -683,18 +744,29 @@ serviceint = """package {pack_service};
 {imports}
 import java.util.List;
 
+import org.sql2o.Connection;
+
 import {pack_model}.{class_name};
 
 public interface {class_name}Service {{
+{indent}{class_name} getBy{methid}({idsfirm}, Connection con);
 {indent}
 {indent}{class_name} getBy{methid}({idsfirm});
+{indent}
+{indent}Long insert({class_name} {varname}, Connection con);
 {indent}
 {indent}Long insert({class_name} {varname});
 {update}
 {indent}
+{indent}Long save({class_name} {varname}, Connection con);
+{indent}
 {indent}Long save({class_name} {varname});
 {indent}
+{indent}List<{class_name}> getAll(Connection con);
+{indent}
 {indent}List<{class_name}> getAll();
+{indent}
+{indent}void delete({idsfirm}, Connection con);
 {indent}
 {indent}void delete({idsfirm});
 }}
@@ -702,6 +774,8 @@ public interface {class_name}Service {{
 """
 
 update_tpl = """
+{indent}
+{indent}void update({class_name} {varname}, Connection con);
 {indent}
 {indent}void update({class_name} {varname});"""
 

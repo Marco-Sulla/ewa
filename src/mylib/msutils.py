@@ -18,7 +18,7 @@ ispymssql = False
 try:
     import pymssql
     ispymssql = True
-except ModuleNotFoundError:
+except ImportError:
     pass
     
 

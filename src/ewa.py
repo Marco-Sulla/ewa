@@ -86,6 +86,8 @@ def convertMsSqlToJavaType(
             else:
                 return "Double"
         return "Long"
+    elif sql_type == "int":
+        return "Integer"
     elif sql_type == "datetime2":
         return "Date"
     elif sql_type == "varchar":
@@ -541,6 +543,8 @@ with open(str(repo_path), mode="w+") as f:
 repoint = """package {pack_repo};
 {imports}
 import java.util.List;
+
+import org.sql2o.Connection;
 
 import {pack_model}.{class_name};
 

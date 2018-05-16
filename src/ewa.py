@@ -5,6 +5,7 @@ from pathlib import Path
 import os
 import argparse
 import configparser
+import re
 
 try:
     app_dir = Path(__file__).resolve().parent
@@ -49,10 +50,20 @@ password = config.get("database", "password")
 host = config.get("database", "host")
 port = int(config.get("database", "port"))
 db_name = config.get("database", "name")
+service_name_str = config.get("database", "service_name")
+
+if service_name_str == "0":
+    service_name = False
+elif service_name_str == "1":
+    service_name = True
+else:
+    raise ValueError("Invalid value for service name: " + service_name_str)
 
 pack_model = config.get("packages", "model")
 pack_repo = config.get("packages", "repository")
 pack_service = config.get("packages", "service")
+
+re_ts = re.compile("timestamp\(\d+\)")
 
 def convertMsSqlToJavaType(
     sql_type, 
@@ -62,6 +73,8 @@ def convertMsSqlToJavaType(
     use_bigdecimal_instead_of_double, 
     use_biginteger_instead_of_long
 ):
+    sql_type = sql_type.lower()
+    
     if sql_type == "numeric":
         
         if scale == 0:
@@ -95,6 +108,47 @@ def convertMsSqlToJavaType(
     else:
         raise Exception("Unsupported type: {}".format(sql_type))
 
+def convertOracleToJavaType(
+    sql_type, 
+    prec, 
+    radix, 
+    scale, 
+    use_bigdecimal_instead_of_double, 
+    use_biginteger_instead_of_long
+):
+    sql_type = sql_type.lower()
+    
+    if sql_type == "number":
+        
+        if scale == 0:
+            maxn = radix**(prec - scale)
+            if maxn < 2**16:
+                if integer_instead_of_short:
+                    return "Integer"
+                else:
+                    return "Short"
+            elif maxn < 2**32:
+                return "Integer"
+            elif maxn < 2**64:
+                return "Long"
+            else:
+                if use_biginteger_instead_of_long:
+                    return "BigInteger"
+                else:
+                    return "Long"
+        else:
+            if use_bigdecimal_instead_of_double:
+                return "BigDecimal"
+            else:
+                return "Double"
+        return "Long"
+    elif re_ts.match(sql_type):
+        return "Date"
+    elif sql_type in ("varchar", "varchar2"):
+        return "String"
+    else:
+        raise Exception("Unsupported type: {}".format(sql_type))
+
         
 class_start = """package {pack_model};
 {imports}
@@ -115,7 +169,7 @@ setter = (
 )
 import_date = "import java.util.Date;"
 
-db_str = msutils.dbString(dtype, user, password, host, port, db_name)
+db_str = msutils.dbString(dtype, user, password, host, port, db_name, service_name)
 
 engine = sqlalchemy.engine.create_engine(db_str, echo=False)
 
@@ -126,10 +180,31 @@ get_columns_data_sql_mssql = """SELECT
     numeric_precision_radix,
     numeric_scale
 FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = N'{}'
+WHERE upper(TABLE_NAME) = N'{}'
 ORDER BY column_name ASC"""
 
-rows = engine.execute(get_columns_data_sql_mssql.format(table_name))
+get_columns_data_sql_oracle = """
+SELECT 
+    column_name, 
+    data_type, 
+    data_precision, 
+    data_length, 
+    data_scale 
+FROM ALL_TAB_COLS 
+WHERE UPPER(table_name) = '{}' 
+ORDER BY column_name ASC
+"""
+
+if dtype == "mssql":
+    converter = convertMsSqlToJavaType
+    get_columns_data_sql = get_columns_data_sql_mssql
+elif dtype == "oracle":
+    converter = convertOracleToJavaType
+    get_columns_data_sql = get_columns_data_sql_oracle
+else:
+    raise Exception("Unsupported database: " + dtype)
+
+rows = engine.execute(get_columns_data_sql.format(table_name))
 
 fields = ""
 methods = ""
@@ -138,17 +213,13 @@ biginteger = False
 col_types = {}
 import_date_eff = ""
 
-if dtype == "mssql":
-    converter = convertMsSqlToJavaType
-else:
-    raise Exception("Unsupported database: " + dtype)
-
 for row in rows:
     col = row[0].upper()
     ctype = row[1]
     prec = row[2]
     radix = row[3]
     scale = row[4]
+    
     jtype = converter(
         ctype, 
         prec, 

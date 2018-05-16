@@ -270,7 +270,7 @@ def isInt(num):
     return num % 1 == 0
 
 
-def dbString(dtype, user, password, host, port, db_name):
+def dbString(dtype, user, password, host, port, db_name, service_name=False):
     if dtype == "oracle":
         type_verb = "oracle"
     elif dtype == "mysql":
@@ -285,7 +285,7 @@ def dbString(dtype, user, password, host, port, db_name):
     else:
         raise RuntimeError("Unsupported db type: {t}".format(t=dtype))
     
-    if dtype == "oracle":
+    if dtype == "oracle" and service_name:
         db_tpl = ("{t}://{u}:{pw}@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)" + 
                   "(Host = {h})(Port={po}))" + 
                   "(CONNECT_DATA=(SERVICE_NAME = {d})))")

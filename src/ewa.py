@@ -282,7 +282,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}{indent}")"
 {indent}{indent});
 {indent}{indent}
-{indent}{indent}Query query = con.createQuery(sql);
+{indent}{indent}Query query = con.createQuery(sql, true);
 {insert_params}
 {indent}{indent}BigDecimal res = (BigDecimal) query.executeUpdate().getKey();
 {indent}{indent}query.close();
@@ -443,7 +443,7 @@ if idshasdate:
     imports += import_date_eff
 
 if imports:
-    imports = "\n" + imports + "\n"
+    imports = "\n" + imports
     
 
 select_fields = ""

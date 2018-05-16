@@ -173,7 +173,8 @@ db_str = msutils.dbString(dtype, user, password, host, port, db_name, service_na
 
 engine = sqlalchemy.engine.create_engine(db_str, echo=False)
 
-get_columns_data_sql_mssql = """SELECT 
+get_columns_data_sql_mssql = """
+SELECT 
     column_name, 
     data_type, 
     numeric_precision, 
@@ -181,7 +182,8 @@ get_columns_data_sql_mssql = """SELECT
     numeric_scale
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE upper(TABLE_NAME) = N'{}'
-ORDER BY column_name ASC"""
+ORDER BY column_name ASC
+"""
 
 get_columns_data_sql_oracle = """
 SELECT 

@@ -146,6 +146,8 @@ def convertOracleToJavaType(
         return "Date"
     elif sql_type in ("varchar", "varchar2"):
         return "String"
+    elif sql_type == "date":
+        return "Date"
     else:
         raise Exception("Unsupported type: {}".format(sql_type))
 

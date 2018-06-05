@@ -181,7 +181,8 @@ SELECT
     data_type, 
     numeric_precision, 
     numeric_precision_radix,
-    numeric_scale
+    numeric_scale,
+    column_id
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE upper(TABLE_NAME) = N'{}'
 ORDER BY column_name ASC
@@ -193,7 +194,8 @@ SELECT
     data_type, 
     data_precision, 
     data_length, 
-    data_scale 
+    data_scale,
+    column_id
 FROM ALL_TAB_COLS 
 WHERE UPPER(table_name) = '{}' 
 ORDER BY column_name ASC
@@ -217,12 +219,29 @@ biginteger = False
 col_types = {}
 import_date_eff = ""
 
+rows = list(rows)
+
+rows_clone = rows[:]
+i = 0
+
+for row in rows_clone:
+    col_id = row[5]
+    
+    if col_id is None:
+        rows.remove(row)
+        i -= 1
+    
+    i += 1
+
 for row in rows:
     col = row[0].upper()
     ctype = row[1]
     prec = row[2]
     radix = row[3]
     scale = row[4]
+    
+    if col_id is None:
+        continue
     
     jtype = converter(
         ctype, 

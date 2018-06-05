@@ -361,8 +361,10 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}
 {indent}{indent}Query query = con.createQuery(sql, true);
 {insert_params}
-{indent}{indent}BigDecimal res = (BigDecimal) query.executeUpdate().getKey();
+{indent}{indent}Object key = query.executeUpdate().getKey();
 {indent}{indent}query.close();
+{indent}{indent}
+{idkey}
 {indent}{indent}
 {indent}{indent}if (res == null) {{
 {indent}{indent}{indent}return null;
@@ -430,6 +432,27 @@ public class {name}RepositoryImpl implements {name}Repository {{
 
 save_tpl = """{indent}{indent}{indent}this.update({varname}, con);
 {indent}{indent}{indent}"""
+
+idkey_mssql_tpl = "{indent}{indent}BigDecimal res = (BigDecimal) key"
+
+idkey_oracle_tpl = """{indent}{indent}String sqlId = "SELECT {id0} FROM {table_name} WHERE rowid  = :key";
+{indent}{indent}Query queryid = con.createQuery(sqlId);
+{indent}{indent}queryid.addParameter("key", key);
+{indent}{indent}Long res = queryid.executeAndFetchFirst(Long.class);
+{indent}{indent}queryid.close();"""
+
+idkey_mssql = idkey_mssql_tpl.format(indent=indent)
+idkey_oracle = idkey_oracle_tpl.format(
+    indent=indent, 
+    id0=ids[0], 
+    table_name=table_name
+)
+
+if dtype == "mssql":
+    idkey = idkey_mssql
+elif dtype == "oracle":
+    idkey = idkey_oracle
+
 
 update_tpl = """{indent}@Override
 {indent}public void update({name} {varname}, Connection con) {{
@@ -604,7 +627,8 @@ repo_res = repo.format(
     pack_model = pack_model,
     pack_repo = pack_repo,
     update = update,
-    save = save
+    save = save,
+    idkey = idkey,
 )
 
 repo_dir = data_dir / pack_repo.replace(".", "/")

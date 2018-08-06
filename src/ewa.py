@@ -144,7 +144,7 @@ def convertOracleToJavaType(
         return "Long"
     elif re_ts.match(sql_type):
         return "Date"
-    elif sql_type in ("varchar", "varchar2"):
+    elif sql_type in ("varchar", "varchar2", "char"):
         return "String"
     elif sql_type == "date":
         return "Date"

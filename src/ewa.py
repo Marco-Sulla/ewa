@@ -16,6 +16,8 @@ except NameError:
 app_descr = "Java code generator"
 help_config = "Set the config file to be read"
 
+java_integer_types = ("BigDecimal", "BigInteger", "Long", "Short")
+
 cmd_parser = argparse.ArgumentParser(description=app_descr)
 cmd_parser.add_argument("--config", required=True, help=help_config)
 
@@ -74,11 +76,17 @@ def convertMsSqlToJavaType(
     use_biginteger_instead_of_long
 ):
     sql_type = sql_type.lower()
+
+    if prec is None:
+        prec = 0
+
+    if scale is None:
+        scale = 0
     
     if sql_type == "numeric":
-        
         if scale == 0:
             maxn = radix**(prec - scale)
+            
             if maxn < 2**16:
                 if integer_instead_of_short:
                     return "Integer"
@@ -116,6 +124,13 @@ def convertOracleToJavaType(
     use_bigdecimal_instead_of_double, 
     use_biginteger_instead_of_long
 ):
+
+    if prec is None:
+        prec = 0
+
+    if scale is None:
+        scale = 0
+    
     sql_type = sql_type.lower()
     
     if sql_type == "number":
@@ -233,6 +248,8 @@ for row in rows_clone:
     
     i += 1
 
+get_idkey = True
+
 for row in rows:
     col = row[0].upper()
     ctype = row[1]
@@ -269,6 +286,10 @@ for row in rows:
         getter.format(type=jtype, methname=methname, name=name) + "\n\n" + 
         setter.format(type=jtype, methname=methname, name=name) + "\n\n"
     )
+    
+    if not multiple_ids and name == ids[0].lower():
+        if jtype not in java_integer_types:
+            get_idkey = False
 
 res = ""
 imports = ""
@@ -384,12 +405,6 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}query.close();
 {indent}{indent}
 {idkey}
-{indent}{indent}
-{indent}{indent}if (res == null) {{
-{indent}{indent}{indent}return null;
-{indent}{indent}}}
-{indent}{indent}
-{indent}{indent}return res.longValue();
 {indent}}}
 {indent}
 {indent}@Override
@@ -452,26 +467,37 @@ public class {name}RepositoryImpl implements {name}Repository {{
 save_tpl = """{indent}{indent}{indent}this.update({varname}, con);
 {indent}{indent}{indent}"""
 
-idkey_mssql_tpl = "{indent}{indent}BigDecimal res = (BigDecimal) key"
+if not multiple_ids and get_idkey:
+    idkey_mssql_tpl = "{indent}{indent}BigDecimal res = (BigDecimal) key"
 
-idkey_oracle_tpl = """{indent}{indent}String sqlId = "SELECT {id0} FROM {table_name} WHERE rowid  = :key";
-{indent}{indent}Query queryid = con.createQuery(sqlId);
-{indent}{indent}queryid.addParameter("key", key);
-{indent}{indent}Long res = queryid.executeAndFetchFirst(Long.class);
-{indent}{indent}queryid.close();"""
+    idkey_oracle_tpl = """{indent}{indent}String sqlId = "SELECT {id0} FROM {table_name} WHERE rowid  = :key";
+    {indent}{indent}Query queryid = con.createQuery(sqlId);
+    {indent}{indent}queryid.addParameter("key", key);
+    {indent}{indent}Long res = queryid.executeAndFetchFirst(Long.class);
+    {indent}{indent}queryid.close();"""
 
-idkey_mssql = idkey_mssql_tpl.format(indent=indent)
-idkey_oracle = idkey_oracle_tpl.format(
-    indent=indent, 
-    id0=ids[0], 
-    table_name=table_name
-)
+    if dtype == "mssql":
+        idkey = idkey_mssql_tpl.format(indent=indent)
+    elif dtype == "oracle":
+        idkey = idkey_oracle_tpl.format(
+            indent=indent, 
+            id0=ids[0], 
+            table_name=table_name
+        )
 
-if dtype == "mssql":
-    idkey = idkey_mssql
-elif dtype == "oracle":
-    idkey = idkey_oracle
+    idkey_end_tpl = """
+    {indent}{indent}
+    {indent}{indent}if (res == null) {{
+    {indent}{indent}{indent}return null;
+    {indent}{indent}}}
+    {indent}{indent}
+    {indent}{indent}return res.longValue();"""
 
+    idkey_end = idkey_end_tpl.format(indent=indent)
+    idkey += idkey_end
+else:
+    idkey_tpl = """{indent}{indent}return null;"""
+    idkey = idkey_tpl.format(indent=indent)
 
 update_tpl = """{indent}@Override
 {indent}public void update({name} {varname}, Connection con) {{

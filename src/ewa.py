@@ -111,7 +111,11 @@ def convertMsSqlToJavaType(
         return "Integer"
     elif sql_type == "datetime2":
         return "Date"
+    elif sql_type == "timestamp":
+        return "Date"
     elif sql_type == "varchar":
+        return "String"
+    elif sql_type == "char":
         return "String"
     else:
         raise Exception("Unsupported type: {}".format(sql_type))
@@ -197,7 +201,7 @@ SELECT
     numeric_precision, 
     numeric_precision_radix,
     numeric_scale,
-    column_id
+    1
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE upper(TABLE_NAME) = N'{}'
 ORDER BY column_name ASC
@@ -468,7 +472,7 @@ save_tpl = """{indent}{indent}{indent}this.update({varname}, con);
 {indent}{indent}{indent}"""
 
 if not multiple_ids and get_idkey:
-    idkey_mssql_tpl = "{indent}{indent}BigDecimal res = (BigDecimal) key"
+    idkey_mssql_tpl = "{indent}{indent}BigDecimal res = (BigDecimal) key;"
 
     idkey_oracle_tpl = """{indent}{indent}String sqlId = "SELECT {id0} FROM {table_name} WHERE rowid  = :key";
     {indent}{indent}Query queryid = con.createQuery(sqlId);
@@ -486,12 +490,12 @@ if not multiple_ids and get_idkey:
         )
 
     idkey_end_tpl = """
-    {indent}{indent}
-    {indent}{indent}if (res == null) {{
-    {indent}{indent}{indent}return null;
-    {indent}{indent}}}
-    {indent}{indent}
-    {indent}{indent}return res.longValue();"""
+{indent}{indent}
+{indent}{indent}if (res == null) {{
+{indent}{indent}{indent}return null;
+{indent}{indent}}}
+{indent}{indent}
+{indent}{indent}return res.longValue();"""
 
     idkey_end = idkey_end_tpl.format(indent=indent)
     idkey += idkey_end

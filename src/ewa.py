@@ -1,11 +1,13 @@
 import sqlalchemy.engine
 import mylib.msutils as msutils
-import configparser
 from pathlib import Path
 import os
 import argparse
 import configparser
 import re
+import sys
+
+VERSION = "2.0.0"
 
 try:
     app_dir = Path(__file__).resolve().parent
@@ -15,15 +17,20 @@ except NameError:
 
 app_descr = "Java code generator"
 help_config = "Set the config file to be read"
+help_version = "Print the version and exit"
 
 java_integer_types = ("BigDecimal", "BigInteger", "Long", "Short")
 
 cmd_parser = argparse.ArgumentParser(description=app_descr)
 cmd_parser.add_argument("--config", required=True, help=help_config)
+cmd_parser.add_argument("--version", action="store_true", help=help_version)
 
 cmd_args = cmd_parser.parse_args()
 cmd_dict = vars(cmd_args)
 
+if cmd_dict.get("version"):
+    print(VERSION)
+    sys.exit(0)
 
 config_path_tpm = cmd_dict["config"]
 config_path = msutils.toAbsPath(config_path_tpm, app_dir)
@@ -327,7 +334,7 @@ with open(str(model_path), mode="w+") as f:
 
 repo = """package {pack_repo};
 {imports}
-import java.util.List;
+import java.util.Collection;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -344,7 +351,6 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}private final Logger logger = LoggerFactory.getLogger(this.getClass());
 {indent}
 {indent}private final String selectBase = (
-{indent}{indent}"select " + 
 {select_fields}
 {indent});
 {indent}
@@ -355,10 +361,8 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}public {name} getBy{methid}({idsfirm}, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.getBy{methid}(): {idslog});
 {indent}{indent}
-{indent}{indent}String sql = (
-{indent}{indent}{indent}selectBase + "from {table_name} {initial} " + 
+{indent}{indent}String sql = "select " + selectBase + "from {table_name} {initial} ";
 {idswhere}
-{indent}{indent});
 {indent}{indent}Query query = con.createQuery(sql);
 {idsparams}
 {indent}{indent}{name} res = query.executeAndFetchFirst({name}.class);
@@ -374,20 +378,43 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{name}> getAll(Connection con) {{
+{indent}public Collection<{name}> getAll(Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.getAll()");
 {indent}{indent}
-{indent}{indent}String sql = selectBase + "from {table_name} {initial} ";
+{indent}{indent}String sql = "select " + selectBase + "from {table_name} {initial} ";
 {indent}{indent}Query query = con.createQuery(sql);
-{indent}{indent}List<{name}> res = query.executeAndFetch({name}.class);
+{indent}{indent}Collection<{name}> res = query.executeAndFetch({name}.class);
 {indent}{indent}query.close();
 {indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{name}> getAll() {{
+{indent}public Collection<{name}> getAll() {{
 {indent}{indent}try (Connection con = sql2o.open()) {{
 {indent}{indent}{indent}return this.getAll(con);
+{indent}{indent}}}
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public Collection<{name}> getByModel({name} {varname}, Connection con) {{
+{indent}{indent}logger.debug("{name}Repository.getByModel()");
+{indent}{indent}
+{indent}{indent}String sql = "select " + selectBase + "from {table_name} {initial} ";
+{indent}{indent}sql += "where ";
+{indent}{indent}
+{bymodel_where}{indent}{indent}sql = sql.substring(0, sql.length() - 4);
+{indent}{indent}
+{indent}{indent}Query query = con.createQuery(sql);
+{indent}{indent}
+{bymodel_params}{indent}{indent}Collection<{name}> res = query.executeAndFetch({name}.class);
+{indent}{indent}query.close();
+{indent}{indent}return res;
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public Collection<{name}> getByModel({name} {varname}) {{
+{indent}{indent}try (Connection con = sql2o.open()) {{
+{indent}{indent}{indent}return this.getByModel({varname}, con);
 {indent}{indent}}}
 {indent}}}
 {indent}
@@ -447,10 +474,8 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}@Override
 {indent}public void delete({idsfirm}, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.delete() : {idslog});
-{indent}{indent}String sql = (
-{indent}{indent}{indent}"delete from {table_name} " + 
+{indent}{indent}String sql = "delete from {table_name} ";
 {idswhere}
-{indent}{indent});
 {indent}{indent}
 {indent}{indent}Query query = con.createQuery(sql);
 {idsparams}
@@ -464,11 +489,32 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}{indent}con.commit();
 {indent}{indent}}}
 {indent}}}
+{indent}
+{indent}@Override
+{indent}public void deleteByModel({name} {varname}, Connection con) {{
+{indent}{indent}logger.debug("{name}Repository.deleteByModel()");
+{indent}{indent}String sql = "delete from {table_name} ";
+{indent}{indent}sql += "where ";
+{indent}{indent}
+{bymodel_where}{indent}{indent}sql = sql.substring(0, sql.length() - 4);
+{indent}{indent}
+{indent}{indent}Query query = con.createQuery(sql);
+{indent}{indent}
+{bymodel_params}{indent}{indent}query.executeUpdate();
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public void deleteByModel({name} {varname}) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
+{indent}{indent}{indent}this.deleteByModel({varname}, con);
+{indent}{indent}{indent}con.commit();
+{indent}{indent}}}
+{indent}}}
 }}
 
 """
 
-save_tpl = """{indent}{indent}{indent}this.update({varname}, con);
+save_tpl = """{indent}{indent}{indent}this.update({varname}, false, con);
 {indent}{indent}{indent}"""
 
 if not multiple_ids and get_idkey:
@@ -504,25 +550,24 @@ else:
     idkey = idkey_tpl.format(indent=indent)
 
 update_tpl = """{indent}@Override
-{indent}public void update({name} {varname}, Connection con) {{
+{indent}public void update({name} {varname}, boolean exclude_nulls, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.update()");
 {indent}{indent}
-{indent}{indent}String sql = (
-{indent}{indent}{indent}"update {table_name} set " + 
-{update_fields}
+{indent}{indent}String sql = "update {table_name} set ";
+{indent}{indent}
+{update_fields}{indent}{indent}sql = sql.substring(0, sql.length() - 2) + " ";
 {idswhere}
-{indent}{indent});
 {indent}{indent}
 {indent}{indent}Query query = con.createQuery(sql);
-{update_params}
-{indent}{indent}query.executeUpdate();
+{indent}{indent}
+{update_params}{indent}{indent}query.executeUpdate();
 {indent}{indent}query.close();
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void update({name} {varname}) {{
+{indent}public void update({name} {varname}, boolean exclude_nulls) {{
 {indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}this.update({varname}, con);
+{indent}{indent}{indent}this.update({varname}, exclude_nulls, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}}}
 {indent}}}
@@ -535,7 +580,7 @@ initial = varname[0]
 
 idsfirm = ""
 idslog = ""
-idswhere = '{indent}{indent}{indent}"where " + \n'.format(indent=indent)
+idswhere = '{indent}{indent}sql += "where "; \n'.format(indent=indent)
 idsinit = ""
 idsparams = ""
 idslist = ""
@@ -552,7 +597,7 @@ for id in ids:
     idsfirm += "{} {}, ".format(col_type, id.lower())
     idslog += '{varid}: " + {varid} + "'.format(varid=varid)
     
-    idswhere += '{indent}{indent}{indent}{indent}"{id} = :{varid} and " + \n'.format(
+    idswhere += '{indent}{indent}sql += "{id} = :{varid} and "; \n'.format(
         indent = indent, 
         id = id, 
         varid = varid
@@ -572,7 +617,7 @@ for id in ids:
 
 idsfirm = idsfirm[:-2]
 idslog = idslog[:-4]
-idswhere = idswhere[:-9] + '"'
+idswhere = idswhere[:-8] + '";'
 idslist = idslist[:-2]
 
 
@@ -599,39 +644,93 @@ select_fields = ""
 insert_fields = ""
 insert_vars = ""
 insert_params = ""
+update_params = ""
+bymodel_params = ""
 update_fields = ""
+bymodel_where = ""
 
 noupdate = True
 
-for col in col_types:
+last_col_i = len(col_types) - 1
+last_col = False
+
+for i, col in enumerate(col_types):
+    if i == last_col_i:
+        last_col = True
+    else:
+        last_col = False
+    
     colname = col.lower()
     methcol = colname[0].upper() + colname[1:]
     
-    select_fields += indent + indent + indent + '"{}.{}, " + \n'.format(initial, col)
+    select_fields += indent + indent + '"{}.{}, " + \n'.format(initial, col)
     insert_fields += indent + indent + indent + indent + '"{}, " + \n'.format(col)
     insert_vars += indent + indent + indent + indent + '":{}, " + \n'.format(col.lower())
     
+    
     insert_params += (
-        indent + indent + 
-        'query.addParameter("{colname}", {varname}.get{methcol}());\n'.format(
+        '{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());\n'.format(
             colname = colname,
             varname = varname,
-            methcol = methcol
+            methcol = methcol,
+            indent = indent
         )
     )
+    
+    update_params += '''{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{
+{indent}{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());
+{indent}{indent}}}
+{indent}{indent}
+'''.format(
+        colname = colname,
+        varname = varname,
+        methcol = methcol,
+        indent = indent
+    )
+    
+    bymodel_params += '''{indent}{indent}if ({varname}.get{methcol}() != null) {{
+{indent}{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());
+{indent}{indent}}}
+{indent}{indent}
+'''.format(
+        colname = colname,
+        varname = varname,
+        methcol = methcol,
+        indent = indent
+    )
+    
+    noupdate = False
+
+    bymodel_where += '''{indent}{indent}if ({varname}.get{methcol}() != null) {{ 
+{indent}{indent}{indent} sql += "{col} = :{colname} and ";
+{indent}{indent}}}
+{indent}{indent}
+'''.format(
+    col=col, 
+    colname=colname, 
+    indent=indent, 
+    varname=varname, 
+    methcol=methcol
+)
     
     if col not in ids:
         noupdate = False
         
-        update_fields += (
-            indent + indent + indent + indent + 
-            '"{col} = :{colname}, " +\n'.format(col=col, colname=colname)
-        )
+        update_fields += '''{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{ 
+{indent}{indent}{indent} sql += "{col} = :{colname}, ";
+{indent}{indent}}}
+{indent}{indent}
+'''.format(
+    col=col, 
+    colname=colname, 
+    indent=indent, 
+    varname=varname, 
+    methcol=methcol
+)
 
 select_fields = select_fields[:-7] + ' "'
 insert_fields = insert_fields[:-7] + ' " + '
 insert_vars = insert_vars[:-7] + ' " + '
-update_fields = update_fields[:-6] + ' " + '
 
 
 if noupdate:
@@ -645,7 +744,7 @@ else:
         table_name = table_name, 
         update_fields = update_fields, 
         varname = varname, 
-        update_params = insert_params
+        update_params = update_params
     )
     
     save = save_tpl.format(
@@ -670,8 +769,10 @@ repo_res = repo.format(
     insert_fields = insert_fields,
     insert_vars = insert_vars,
     insert_params = insert_params,
-    update_params = insert_params,
+    update_params = update_params,
+    bymodel_params = bymodel_params,
     update_fields = update_fields,
+    bymodel_where = bymodel_where,
     initial = initial,
     pack_model = pack_model,
     pack_repo = pack_repo,
@@ -690,7 +791,7 @@ with open(str(repo_path), mode="w+") as f:
 
 repoint = """package {pack_repo};
 {imports}
-import java.util.List;
+import java.util.Collection;
 
 import org.sql2o.Connection;
 
@@ -710,21 +811,29 @@ public interface {class_name}Repository {{
 {indent}
 {indent}Long save({class_name} {varname});
 {indent}
-{indent}List<{class_name}> getAll(Connection con);
+{indent}Collection<{class_name}> getAll(Connection con);
 {indent}
-{indent}List<{class_name}> getAll();
+{indent}Collection<{class_name}> getAll();
+{indent}
+{indent}Collection<{class_name}> getByModel({class_name} {varname}, Connection con);
+{indent}
+{indent}Collection<{class_name}> getByModel({class_name} {varname});
 {indent}
 {indent}void delete({idsfirm}, Connection con);
 {indent}
 {indent}void delete({idsfirm});
+{indent}
+{indent}void deleteByModel({class_name} {varname}, Connection con);
+{indent}
+{indent}void deleteByModel({class_name} {varname});
 }}
 
 """
 
 update_tpl = """{indent}
-{indent}void update({class_name} {varname}, Connection con);
+{indent}void update({class_name} {varname}, boolean exclude_nulls, Connection con);
 {indent}
-{indent}void update({class_name} {varname});"""
+{indent}void update({class_name} {varname}, boolean exclude_nulls);"""
 
 if noupdate:
     update = ""
@@ -756,7 +865,7 @@ with open(str(repoint_path), mode="w+") as f:
 
 service = """package {pack_service};
 {imports}
-import java.util.List;
+import java.util.Collection;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -777,28 +886,46 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}{indent}}}
 {indent}}}
 {indent}
-{indent}@Override
-{indent}public List<{class_name}> getAll(Connection con) {{
-{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getAll(con);
-{indent}{indent}
+{indent}private void enrich(Collection<{class_name}> {varname}s) {{
 {indent}{indent}if ({varname}s != null) {{
 {indent}{indent}{indent}for ({class_name} {varname}: {varname}s) {{
 {indent}{indent}{indent}{indent}this.enrich({varname});
 {indent}{indent}{indent}}}
 {indent}{indent}}}
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public Collection<{class_name}> getAll(Connection con) {{
+{indent}{indent}Collection<{class_name}> {varname}s = {varname}Repository.getAll(con);
+{indent}{indent}
+{indent}{indent}this.enrich({varname}s);
 {indent}{indent}
 {indent}{indent}return {varname}s;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> getAll() {{
-{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getAll();
+{indent}public Collection<{class_name}> getAll() {{
+{indent}{indent}Collection<{class_name}> {varname}s = {varname}Repository.getAll();
 {indent}{indent}
-{indent}{indent}if ({varname}s != null) {{
-{indent}{indent}{indent}for ({class_name} {varname}: {varname}s) {{
-{indent}{indent}{indent}{indent}this.enrich({varname});
-{indent}{indent}{indent}}}
-{indent}{indent}}}
+{indent}{indent}this.enrich({varname}s);
+{indent}{indent}
+{indent}{indent}return {varname}s;
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public Collection<{class_name}> getByModel({class_name} {varname}, Connection con) {{
+{indent}{indent}Collection<{class_name}> {varname}s = {varname}Repository.getByModel({varname}, con);
+{indent}{indent}
+{indent}{indent}this.enrich({varname}s);
+{indent}{indent}
+{indent}{indent}return {varname}s;
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public Collection<{class_name}> getByModel({class_name} {varname}) {{
+{indent}{indent}Collection<{class_name}> {varname}s = {varname}Repository.getByModel({varname});
+{indent}{indent}
+{indent}{indent}this.enrich({varname}s);
 {indent}{indent}
 {indent}{indent}return {varname}s;
 {indent}}}
@@ -849,6 +976,16 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}public void delete({idsfirm}) {{
 {indent}{indent}{varname}Repository.delete({idslist});
 {indent}}}
+{indent}
+{indent}@Override
+{indent}public void deleteByModel({class_name} {varname}, Connection con) {{
+{indent}{indent}{varname}Repository.deleteByModel({varname}, con);
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public void deleteByModel({class_name} {varname}) {{
+{indent}{indent}{varname}Repository.deleteByModel({varname});
+{indent}}}
 }}
 
 """
@@ -856,13 +993,13 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 update_tpl = """
 {indent}
 {indent}@Override
-{indent}public void update({class_name} {varname}, Connection con) {{
-{indent}{indent}{varname}Repository.update({varname}, con);
+{indent}public void update({class_name} {varname}, boolean exclude_nulls, Connection con) {{
+{indent}{indent}{varname}Repository.update({varname}, exclude_nulls, con);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void update({class_name} {varname}) {{
-{indent}{indent}{varname}Repository.update({varname});
+{indent}public void update({class_name} {varname}, boolean exclude_nulls) {{
+{indent}{indent}{varname}Repository.update({varname}, exclude_nulls);
 {indent}}}"""
 
 if noupdate:
@@ -894,7 +1031,7 @@ with open(str(service_path), mode="w+") as f:
 
 serviceint = """package {pack_service};
 {imports}
-import java.util.List;
+import java.util.Collection;
 
 import org.sql2o.Connection;
 
@@ -914,22 +1051,30 @@ public interface {class_name}Service {{
 {indent}
 {indent}Long save({class_name} {varname});
 {indent}
-{indent}List<{class_name}> getAll(Connection con);
+{indent}Collection<{class_name}> getAll(Connection con);
 {indent}
-{indent}List<{class_name}> getAll();
+{indent}Collection<{class_name}> getAll();
+{indent}
+{indent}Collection<{class_name}> getByModel({class_name} {varname}, Connection con);
+{indent}
+{indent}Collection<{class_name}> getByModel({class_name} {varname});
 {indent}
 {indent}void delete({idsfirm}, Connection con);
 {indent}
 {indent}void delete({idsfirm});
+{indent}
+{indent}void deleteByModel({class_name} {varname}, Connection con);
+{indent}
+{indent}void deleteByModel({class_name} {varname});
 }}
 
 """
 
 update_tpl = """
 {indent}
-{indent}void update({class_name} {varname}, Connection con);
+{indent}void update({class_name} {varname}, boolean exclude_nulls, Connection con);
 {indent}
-{indent}void update({class_name} {varname});"""
+{indent}void update({class_name} {varname}, boolean exclude_nulls);"""
 
 if noupdate:
     update = ""

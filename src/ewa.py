@@ -7,7 +7,7 @@ import configparser
 import re
 import sys
 
-VERSION = "2.0.0"
+VERSION = "3.0.0"
 
 try:
     app_dir = Path(__file__).resolve().parent
@@ -71,6 +71,7 @@ else:
 pack_model = config.get("packages", "model")
 pack_repo = config.get("packages", "repository")
 pack_service = config.get("packages", "service")
+pack_utility = config.get("packages", "utility")
 
 re_ts = re.compile("timestamp\(\d+\)")
 
@@ -259,8 +260,6 @@ for row in rows_clone:
     
     i += 1
 
-get_idkey = True
-
 for row in rows:
     col = row[0].upper()
     ctype = row[1]
@@ -297,10 +296,6 @@ for row in rows:
         getter.format(type=jtype, methname=methname, name=name) + "\n\n" + 
         setter.format(type=jtype, methname=methname, name=name) + "\n\n"
     )
-    
-    if not multiple_ids and name == ids[0].lower():
-        if jtype not in java_integer_types:
-            get_idkey = False
 
 res = ""
 imports = ""
@@ -319,6 +314,18 @@ if imports:
 res += class_start.format(imports=imports, class_name=class_name, pack_model=pack_model) + "\n"
 res += fields + "\n\n" + methods.rstrip() + "\n" + class_end
 
+
+if multiple_ids:
+    methid = "Ids"
+else:
+    methid = ids[0][0].upper() + ids[0][1:].lower()
+
+varname = class_name[0].lower() + class_name[1:]
+initial = varname[0]
+if not multiple_ids:
+    id_col_type = col_types[ids[0]]
+
+
 data_dir = app_dir / "data" / class_name
 model_dir = data_dir / pack_model.replace(".", "/")
 
@@ -334,7 +341,8 @@ with open(str(model_path), mode="w+") as f:
 
 repo = """package {pack_repo};
 {imports}
-import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -343,83 +351,109 @@ import org.springframework.stereotype.Repository;
 import org.sql2o.Connection;
 import org.sql2o.Query;
 import org.sql2o.Sql2o;
+import org.sql2o.Sql2oException;
 
 import {pack_model}.{name};
+import {pack_utility}.Sql2oUtility;
 
 @Repository
 public class {name}RepositoryImpl implements {name}Repository {{
 {indent}private final Logger logger = LoggerFactory.getLogger(this.getClass());
 {indent}
-{indent}private final String selectBase = (
-{select_fields}
-{indent});
-{indent}
 {indent}@Autowired
 {indent}private Sql2o sql2o;
 {indent}
+{indent}private String getSelectBase(List<String> fields_to_ignore) {{
+{select_fields}{indent}{indent}return res;
+{indent}}};
+{indent}
 {indent}@Override
-{indent}public {name} getBy{methid}({idsfirm}, Connection con) {{
+{indent}public {name} getBy{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.getBy{methid}(): {idslog});
 {indent}{indent}
-{indent}{indent}String sql = "select " + selectBase + "from {table_name} {initial} ";
+{indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {idswhere}
-{indent}{indent}Query query = con.createQuery(sql);
+{indent}{indent}try {{
+{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
+{indent}{indent}}}
+{indent}{indent}catch (
+{indent}{indent}{indent}NoSuchFieldException | 
+{indent}{indent}{indent}IllegalArgumentException | 
+{indent}{indent}{indent}IllegalAccessException e
+{indent}{indent}) {{
+{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
+{indent}{indent}}}
 {idsparams}
 {indent}{indent}{name} res = query.executeAndFetchFirst({name}.class);
-{indent}{indent}query.close();
 {indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {name} getBy{methid}({idsfirm}) {{
-{indent}{indent}try (Connection con = sql2o.open()) {{
-{indent}{indent}{indent}return this.getBy{methid}({idslist}, con);
+{indent}public {name} getBy{methid}({idsfirm}, List<String> fields_to_ignore) {{
+{indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("", true)) {{
+{indent}{indent}{indent}return this.getBy{methid}({idslist}, fields_to_ignore, query, con);
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Collection<{name}> getAll(Connection con) {{
+{indent}public List<{name}> getAll(List<String> fields_to_ignore, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.getAll()");
 {indent}{indent}
-{indent}{indent}String sql = "select " + selectBase + "from {table_name} {initial} ";
-{indent}{indent}Query query = con.createQuery(sql);
-{indent}{indent}Collection<{name}> res = query.executeAndFetch({name}.class);
-{indent}{indent}query.close();
+{indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
+{indent}{indent}try {{
+{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
+{indent}{indent}}}
+{indent}{indent}catch (
+{indent}{indent}{indent}NoSuchFieldException | 
+{indent}{indent}{indent}IllegalArgumentException | 
+{indent}{indent}{indent}IllegalAccessException e
+{indent}{indent}) {{
+{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
+{indent}{indent}}}
+{indent}{indent}List<{name}> res = query.executeAndFetch({name}.class);
 {indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Collection<{name}> getAll() {{
-{indent}{indent}try (Connection con = sql2o.open()) {{
-{indent}{indent}{indent}return this.getAll(con);
+{indent}public List<{name}> getAll(List<String> fields_to_ignore) {{
+{indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("", true)) {{
+{indent}{indent}{indent}return this.getAll(fields_to_ignore, query, con);
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Collection<{name}> getByModel({name} {varname}, Connection con) {{
+{indent}public List<{name}> getByModel({name} {varname}, List<String> fields_to_ignore, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.getByModel()");
 {indent}{indent}
-{indent}{indent}String sql = "select " + selectBase + "from {table_name} {initial} ";
+{indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {indent}{indent}sql += "where ";
 {indent}{indent}
 {bymodel_where}{indent}{indent}sql = sql.substring(0, sql.length() - 4);
 {indent}{indent}
-{indent}{indent}Query query = con.createQuery(sql);
+{indent}{indent}try {{
+{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
+{indent}{indent}}}
+{indent}{indent}catch (
+{indent}{indent}{indent}NoSuchFieldException | 
+{indent}{indent}{indent}IllegalArgumentException | 
+{indent}{indent}{indent}IllegalAccessException e
+{indent}{indent}) {{
+{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
+{indent}{indent}}}
 {indent}{indent}
-{bymodel_params}{indent}{indent}Collection<{name}> res = query.executeAndFetch({name}.class);
-{indent}{indent}query.close();
+{bymodel_params}{indent}{indent}List<{name}> res = query.executeAndFetch({name}.class);
 {indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Collection<{name}> getByModel({name} {varname}) {{
-{indent}{indent}try (Connection con = sql2o.open()) {{
-{indent}{indent}{indent}return this.getByModel({varname}, con);
+{indent}public List<{name}> getByModel({name} {varname}, List<String> fields_to_ignore) {{
+{indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("", true)) {{
+{indent}{indent}{indent}return this.getByModel({varname}, fields_to_ignore, query, con);
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Long insert({name} {varname}, Connection con) {{
+{indent}public {name} insert({name} {varname}, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.insert()");
 {indent}{indent}String sql = (
 {indent}{indent}{indent}"insert into {table_name} ( " + 
@@ -430,83 +464,110 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}{indent}")"
 {indent}{indent});
 {indent}{indent}
-{indent}{indent}Query query = con.createQuery(sql, true);
+{indent}{indent}try {{
+{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
+{indent}{indent}}}
+{indent}{indent}catch (
+{indent}{indent}{indent}NoSuchFieldException | 
+{indent}{indent}{indent}IllegalArgumentException | 
+{indent}{indent}{indent}IllegalAccessException e
+{indent}{indent}) {{
+{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
+{indent}{indent}}}
 {insert_params}
 {indent}{indent}Object key = query.executeUpdate().getKey();
-{indent}{indent}query.close();
 {indent}{indent}
 {idkey}
+{indent}{indent}
+{indent}{indent}return {varname};
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Long insert({name} {varname}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}Long res = this.insert({varname}, con);
+{indent}public {name} insert({name} {varname}) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("", true)) {{
+{indent}{indent}{indent}{varname} = this.insert({varname}, query, con);
 {indent}{indent}{indent}con.commit();
-{indent}{indent}{indent}return res;
+{indent}{indent}{indent}return {varname};
 {indent}{indent}}}
 {indent}}}
 {indent}
 {update}
 {indent}@Override
-{indent}public Long save({name} {varname}, Connection con) {{
+{indent}public {name} save({name} {varname}, Query query, Connection con) {{
 {idsinit}
-{indent}{indent}{name} {varname}2 = this.getBy{methid}({idslist}, con);
+{indent}{indent}{name} {varname}2 = this.getBy{methid}({idslist}, null, query, con);
 {indent}{indent}
 {indent}{indent}if ({varname}2 == null) {{
-{indent}{indent}{indent}return this.insert({varname}, con);
+{indent}{indent}{indent}return this.insert({varname}, query, con);
 {indent}{indent}}}
 {indent}{indent}else {{
 {save}
-{indent}{indent}{indent}return null;
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Long save({name} {varname}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}Long res = this.save({varname}, con);
+{indent}public {name} save({name} {varname}) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("", true)) {{
+{indent}{indent}{indent}{name} res = this.save({varname}, query, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}{indent}return res;
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void delete({idsfirm}, Connection con) {{
+{indent}public void delete({idsfirm}, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.delete() : {idslog});
 {indent}{indent}String sql = "delete from {table_name} ";
 {idswhere}
 {indent}{indent}
-{indent}{indent}Query query = con.createQuery(sql);
+{indent}{indent}try {{
+{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
+{indent}{indent}}}
+{indent}{indent}catch (
+{indent}{indent}{indent}NoSuchFieldException | 
+{indent}{indent}{indent}IllegalArgumentException | 
+{indent}{indent}{indent}IllegalAccessException e
+{indent}{indent}) {{
+{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
+{indent}{indent}}}
 {idsparams}
 {indent}{indent}query.executeUpdate();
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public void delete({idsfirm}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}this.delete({idslist}, con);
+{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("", true)) {{
+{indent}{indent}{indent}this.delete({idslist}, query, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void deleteByModel({name} {varname}, Connection con) {{
+{indent}public void deleteByModel({name} {varname}, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.deleteByModel()");
 {indent}{indent}String sql = "delete from {table_name} ";
 {indent}{indent}sql += "where ";
 {indent}{indent}
 {bymodel_where}{indent}{indent}sql = sql.substring(0, sql.length() - 4);
 {indent}{indent}
-{indent}{indent}Query query = con.createQuery(sql);
+{indent}{indent}try {{
+{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
+{indent}{indent}}}
+{indent}{indent}catch (
+{indent}{indent}{indent}NoSuchFieldException | 
+{indent}{indent}{indent}IllegalArgumentException | 
+{indent}{indent}{indent}IllegalAccessException e
+{indent}{indent}) {{
+{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
+{indent}{indent}}}
 {indent}{indent}
 {bymodel_params}{indent}{indent}query.executeUpdate();
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public void deleteByModel({name} {varname}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}this.deleteByModel({varname}, con);
+{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("", true)) {{
+{indent}{indent}{indent}this.deleteByModel({varname}, query, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}}}
 {indent}}}
@@ -514,43 +575,52 @@ public class {name}RepositoryImpl implements {name}Repository {{
 
 """
 
-save_tpl = """{indent}{indent}{indent}this.update({varname}, false, con);
+save_tpl = """{indent}{indent}{indent}return this.update({varname}, false, query, con);
 {indent}{indent}{indent}"""
 
-if not multiple_ids and get_idkey:
-    idkey_mssql_tpl = "{indent}{indent}BigDecimal res = (BigDecimal) key;"
+idkey = "";
+
+if not multiple_ids:
+    idkey_mssql_tpl = "{indent}{indent}Object res = key;"
 
     idkey_oracle_tpl = """{indent}{indent}String sqlId = "SELECT {id0} FROM {table_name} WHERE rowid  = :key";
     {indent}{indent}Query queryid = con.createQuery(sqlId);
     {indent}{indent}queryid.addParameter("key", key);
-    {indent}{indent}Long res = queryid.executeAndFetchFirst(Long.class);
+    {indent}{indent}Object res = queryid.executeAndFetchFirst(Long.class);
     {indent}{indent}queryid.close();"""
 
     if dtype == "mssql":
         idkey = idkey_mssql_tpl.format(indent=indent)
     elif dtype == "oracle":
         idkey = idkey_oracle_tpl.format(
-            indent=indent, 
-            id0=ids[0], 
-            table_name=table_name
+            indent = indent, 
+            id0 = ids[0], 
+            table_name = table_name
         )
 
     idkey_end_tpl = """
 {indent}{indent}
-{indent}{indent}if (res == null) {{
-{indent}{indent}{indent}return null;
-{indent}{indent}}}
+{indent}{indent}Object res_true;
 {indent}{indent}
-{indent}{indent}return res.longValue();"""
+{indent}{indent}if (res != null && res instanceof BigDecimal) {{
+{indent}{indent}{indent}res_true = ((BigDecimal) res).longValue();
+{indent}{indent}}}
+{indent}{indent}else {{
+{indent}{indent}{indent}res_true = res;
+{indent}{indent}}}
+{indent}{indent}{varname}.set{methid}(({id_col_type}) res_true);"""
 
-    idkey_end = idkey_end_tpl.format(indent=indent)
+    idkey_end = idkey_end_tpl.format(
+        indent = indent, 
+        methid = methid, 
+        varname = varname,
+        id_col_type = id_col_type
+    )
+    
     idkey += idkey_end
-else:
-    idkey_tpl = """{indent}{indent}return null;"""
-    idkey = idkey_tpl.format(indent=indent)
 
 update_tpl = """{indent}@Override
-{indent}public void update({name} {varname}, boolean exclude_nulls, Connection con) {{
+{indent}public {name} update({name} {varname}, boolean exclude_nulls, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.update()");
 {indent}{indent}
 {indent}{indent}String sql = "update {table_name} set ";
@@ -558,23 +628,30 @@ update_tpl = """{indent}@Override
 {update_fields}{indent}{indent}sql = sql.substring(0, sql.length() - 2) + " ";
 {idswhere}
 {indent}{indent}
-{indent}{indent}Query query = con.createQuery(sql);
+{indent}{indent}try {{
+{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
+{indent}{indent}}}
+{indent}{indent}catch (
+{indent}{indent}{indent}NoSuchFieldException | 
+{indent}{indent}{indent}IllegalArgumentException | 
+{indent}{indent}{indent}IllegalAccessException e
+{indent}{indent}) {{
+{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
+{indent}{indent}}}
 {indent}{indent}
 {update_params}{indent}{indent}query.executeUpdate();
-{indent}{indent}query.close();
+{indent}{indent}return {varname};
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void update({name} {varname}, boolean exclude_nulls) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}this.update({varname}, exclude_nulls, con);
+{indent}public {name} update({name} {varname}, boolean exclude_nulls) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("", true)) {{
+{indent}{indent}{indent}{varname} = this.update({varname}, exclude_nulls, query, con);
 {indent}{indent}{indent}con.commit();
+{indent}{indent}{indent}return {varname};
 {indent}{indent}}}
 {indent}}}
 {indent}"""
-
-varname = class_name[0].lower() + class_name[1:]
-initial = varname[0]
 
 
 
@@ -621,12 +698,6 @@ idswhere = idswhere[:-8] + '";'
 idslist = idslist[:-2]
 
 
-
-if multiple_ids:
-    methid = "Ids"
-else:
-    methid = ids[0][0].upper() + ids[0][1:].lower()
-
 imports = "import java.math.BigDecimal;\n"
 
 import_date_eff = ""
@@ -640,7 +711,21 @@ if imports:
     imports = "\n" + imports
     
 
-select_fields = ""
+
+select_fields_tpl = '{indent}{indent}String res = "";'
+select_fields_tpl += (
+"""
+{indent}{indent}
+{indent}{indent}fields_to_ignore = fields_to_ignore
+{indent}{indent}{indent}.stream()
+{indent}{indent}{indent}.map(field -> field.toUpperCase())
+{indent}{indent}{indent}.collect(Collectors.toList());
+{indent}{indent}
+""")
+        
+select_fields = select_fields_tpl.format(indent=indent)
+
+
 insert_fields = ""
 insert_vars = ""
 insert_params = ""
@@ -654,6 +739,13 @@ noupdate = True
 last_col_i = len(col_types) - 1
 last_col = False
 
+
+    
+insert_params = '{indent}{indent}query.bind({varname});\n'.format(
+    varname = varname,
+    indent = indent
+)
+
 for i, col in enumerate(col_types):
     if i == last_col_i:
         last_col = True
@@ -663,19 +755,15 @@ for i, col in enumerate(col_types):
     colname = col.lower()
     methcol = colname[0].upper() + colname[1:]
     
-    select_fields += indent + indent + '"{}.{}, " + \n'.format(initial, col)
+    select_field_tpl = '{indent}{indent}if (fields_to_ignore != null && ! fields_to_ignore.contains("{col}")) {{\n'
+    select_field_tpl += '{indent}{indent}{indent}res += "{initial}.{col}, ";\n'
+    
+    select_field_tpl += '{indent}{indent}}}\n{indent}{indent}\n'
+    select_field = select_field_tpl.format(indent=indent, initial=initial, col=col)
+    select_fields += select_field
+    
     insert_fields += indent + indent + indent + indent + '"{}, " + \n'.format(col)
     insert_vars += indent + indent + indent + indent + '":{}, " + \n'.format(col.lower())
-    
-    
-    insert_params += (
-        '{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());\n'.format(
-            colname = colname,
-            varname = varname,
-            methcol = methcol,
-            indent = indent
-        )
-    )
     
     update_params += '''{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{
 {indent}{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());
@@ -728,14 +816,18 @@ for i, col in enumerate(col_types):
     methcol=methcol
 )
 
-select_fields = select_fields[:-7] + ' "'
+select_fields += """{indent}{indent}res = res.substring(0, res.length() - 2);
+{indent}{indent}\n""".format(indent = indent)
 insert_fields = insert_fields[:-7] + ' " + '
 insert_vars = insert_vars[:-7] + ' " + '
 
 
 if noupdate:
     update = ""
-    save = ""
+    save_tpl = "{indent}{indent}{indent}return null;"
+    save = save_tpl.format(
+        indent = indent
+    )
 else:
     update = update_tpl.format(
         indent = indent, 
@@ -775,6 +867,7 @@ repo_res = repo.format(
     bymodel_where = bymodel_where,
     initial = initial,
     pack_model = pack_model,
+    pack_utility = pack_utility,
     pack_repo = pack_repo,
     update = update,
     save = save,
@@ -791,39 +884,40 @@ with open(str(repo_path), mode="w+") as f:
 
 repoint = """package {pack_repo};
 {imports}
-import java.util.Collection;
+import java.util.List;
 
 import org.sql2o.Connection;
+import org.sql2o.Query;
 
 import {pack_model}.{class_name};
 
 public interface {class_name}Repository {{
-{indent}{class_name} getBy{methid}({idsfirm}, Connection con);
+{indent}{class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}{class_name} getBy{methid}({idsfirm});
+{indent}{class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore);
 {indent}
-{indent}Long insert({class_name} {varname}, Connection con);
+{indent}{class_name} insert({class_name} {varname}, Query query, Connection con);
 {indent}
-{indent}Long insert({class_name} {varname});
+{indent}{class_name} insert({class_name} {varname});
 {update}
 {indent}
-{indent}Long save({class_name} {varname}, Connection con);
+{indent}{class_name} save({class_name} {varname}, Query query, Connection con);
 {indent}
-{indent}Long save({class_name} {varname});
+{indent}{class_name} save({class_name} {varname});
 {indent}
-{indent}Collection<{class_name}> getAll(Connection con);
+{indent}List<{class_name}> getAll(List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}Collection<{class_name}> getAll();
+{indent}List<{class_name}> getAll(List<String> fields_to_ignore);
 {indent}
-{indent}Collection<{class_name}> getByModel({class_name} {varname}, Connection con);
+{indent}List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}Collection<{class_name}> getByModel({class_name} {varname});
+{indent}List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore);
 {indent}
-{indent}void delete({idsfirm}, Connection con);
+{indent}void delete({idsfirm}, Query query, Connection con);
 {indent}
 {indent}void delete({idsfirm});
 {indent}
-{indent}void deleteByModel({class_name} {varname}, Connection con);
+{indent}void deleteByModel({class_name} {varname}, Query query, Connection con);
 {indent}
 {indent}void deleteByModel({class_name} {varname});
 }}
@@ -831,9 +925,9 @@ public interface {class_name}Repository {{
 """
 
 update_tpl = """{indent}
-{indent}void update({class_name} {varname}, boolean exclude_nulls, Connection con);
+{indent}{class_name} update({class_name} {varname}, boolean exclude_nulls, Query query, Connection con);
 {indent}
-{indent}void update({class_name} {varname}, boolean exclude_nulls);"""
+{indent}{class_name} update({class_name} {varname}, boolean exclude_nulls);"""
 
 if noupdate:
     update = ""
@@ -865,11 +959,12 @@ with open(str(repoint_path), mode="w+") as f:
 
 service = """package {pack_service};
 {imports}
-import java.util.Collection;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.sql2o.Connection;
+import org.sql2o.Query;
 
 import {pack_model}.{class_name};
 import {pack_repo}.{class_name}Repository;
@@ -886,7 +981,7 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}{indent}}}
 {indent}}}
 {indent}
-{indent}private void enrich(Collection<{class_name}> {varname}s) {{
+{indent}private void enrich(List<{class_name}> {varname}s) {{
 {indent}{indent}if ({varname}s != null) {{
 {indent}{indent}{indent}for ({class_name} {varname}: {varname}s) {{
 {indent}{indent}{indent}{indent}this.enrich({varname});
@@ -895,8 +990,8 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Collection<{class_name}> getAll(Connection con) {{
-{indent}{indent}Collection<{class_name}> {varname}s = {varname}Repository.getAll(con);
+{indent}public List<{class_name}> getAll(List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getAll(fields_to_ignore, query, con);
 {indent}{indent}
 {indent}{indent}this.enrich({varname}s);
 {indent}{indent}
@@ -904,8 +999,8 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Collection<{class_name}> getAll() {{
-{indent}{indent}Collection<{class_name}> {varname}s = {varname}Repository.getAll();
+{indent}public List<{class_name}> getAll(List<String> fields_to_ignore) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getAll(fields_to_ignore);
 {indent}{indent}
 {indent}{indent}this.enrich({varname}s);
 {indent}{indent}
@@ -913,8 +1008,8 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Collection<{class_name}> getByModel({class_name} {varname}, Connection con) {{
-{indent}{indent}Collection<{class_name}> {varname}s = {varname}Repository.getByModel({varname}, con);
+{indent}public List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getByModel({varname}, fields_to_ignore, query, con);
 {indent}{indent}
 {indent}{indent}this.enrich({varname}s);
 {indent}{indent}
@@ -922,8 +1017,8 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Collection<{class_name}> getByModel({class_name} {varname}) {{
-{indent}{indent}Collection<{class_name}> {varname}s = {varname}Repository.getByModel({varname});
+{indent}public List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getByModel({varname}, fields_to_ignore);
 {indent}{indent}
 {indent}{indent}this.enrich({varname}s);
 {indent}{indent}
@@ -931,45 +1026,45 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} getBy{methid}({idsfirm}, Connection con) {{
-{indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist}, con);
+{indent}public {class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist}, fields_to_ignore, query, con);
 {indent}{indent}this.enrich({varname});
 {indent}{indent}
 {indent}{indent}return {varname};
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} getBy{methid}({idsfirm}) {{
-{indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist});
+{indent}public {class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore) {{
+{indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist}, fields_to_ignore);
 {indent}{indent}this.enrich({varname});
 {indent}{indent}
 {indent}{indent}return {varname};
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Long insert({class_name} {varname}, Connection con) {{
-{indent}{indent}return {varname}Repository.insert({varname}, con);
+{indent}public {class_name} insert({class_name} {varname}, Query query, Connection con) {{
+{indent}{indent}return {varname}Repository.insert({varname}, query, con);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Long insert({class_name} {varname}) {{
+{indent}public {class_name} insert({class_name} {varname}) {{
 {indent}{indent}return {varname}Repository.insert({varname});
 {indent}}}
 {update}
 {indent}
 {indent}@Override
-{indent}public Long save({class_name} {varname}, Connection con) {{
-{indent}{indent}return {varname}Repository.save({varname}, con);
+{indent}public {class_name} save({class_name} {varname}, Query query, Connection con) {{
+{indent}{indent}return {varname}Repository.save({varname}, query, con);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public Long save({class_name} {varname}) {{
+{indent}public {class_name} save({class_name} {varname}) {{
 {indent}{indent}return {varname}Repository.save({varname});
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void delete({idsfirm}, Connection con) {{
-{indent}{indent}{varname}Repository.delete({idslist}, con);
+{indent}public void delete({idsfirm}, Query query, Connection con) {{
+{indent}{indent}{varname}Repository.delete({idslist}, query, con);
 {indent}}}
 {indent}
 {indent}@Override
@@ -978,8 +1073,8 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void deleteByModel({class_name} {varname}, Connection con) {{
-{indent}{indent}{varname}Repository.deleteByModel({varname}, con);
+{indent}public void deleteByModel({class_name} {varname}, Query query, Connection con) {{
+{indent}{indent}{varname}Repository.deleteByModel({varname}, query, con);
 {indent}}}
 {indent}
 {indent}@Override
@@ -993,13 +1088,13 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 update_tpl = """
 {indent}
 {indent}@Override
-{indent}public void update({class_name} {varname}, boolean exclude_nulls, Connection con) {{
-{indent}{indent}{varname}Repository.update({varname}, exclude_nulls, con);
+{indent}public {class_name} update({class_name} {varname}, boolean exclude_nulls, Query query, Connection con) {{
+{indent}{indent}return {varname}Repository.update({varname}, exclude_nulls, query, con);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void update({class_name} {varname}, boolean exclude_nulls) {{
-{indent}{indent}{varname}Repository.update({varname}, exclude_nulls);
+{indent}public {class_name} update({class_name} {varname}, boolean exclude_nulls) {{
+{indent}{indent}return {varname}Repository.update({varname}, exclude_nulls);
 {indent}}}"""
 
 if noupdate:
@@ -1031,39 +1126,40 @@ with open(str(service_path), mode="w+") as f:
 
 serviceint = """package {pack_service};
 {imports}
-import java.util.Collection;
+import java.util.List;
 
 import org.sql2o.Connection;
+import org.sql2o.Query;
 
 import {pack_model}.{class_name};
 
 public interface {class_name}Service {{
-{indent}{class_name} getBy{methid}({idsfirm}, Connection con);
+{indent}{class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}{class_name} getBy{methid}({idsfirm});
+{indent}{class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore);
 {indent}
-{indent}Long insert({class_name} {varname}, Connection con);
+{indent}{class_name} insert({class_name} {varname}, Query query, Connection con);
 {indent}
-{indent}Long insert({class_name} {varname});
+{indent}{class_name} insert({class_name} {varname});
 {update}
 {indent}
-{indent}Long save({class_name} {varname}, Connection con);
+{indent}{class_name} save({class_name} {varname}, Query query, Connection con);
 {indent}
-{indent}Long save({class_name} {varname});
+{indent}{class_name} save({class_name} {varname});
 {indent}
-{indent}Collection<{class_name}> getAll(Connection con);
+{indent}List<{class_name}> getAll(List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}Collection<{class_name}> getAll();
+{indent}List<{class_name}> getAll(List<String> fields_to_ignore);
 {indent}
-{indent}Collection<{class_name}> getByModel({class_name} {varname}, Connection con);
+{indent}List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}Collection<{class_name}> getByModel({class_name} {varname});
+{indent}List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore);
 {indent}
-{indent}void delete({idsfirm}, Connection con);
+{indent}void delete({idsfirm}, Query query, Connection con);
 {indent}
 {indent}void delete({idsfirm});
 {indent}
-{indent}void deleteByModel({class_name} {varname}, Connection con);
+{indent}void deleteByModel({class_name} {varname}, Query query, Connection con);
 {indent}
 {indent}void deleteByModel({class_name} {varname});
 }}
@@ -1072,9 +1168,9 @@ public interface {class_name}Service {{
 
 update_tpl = """
 {indent}
-{indent}void update({class_name} {varname}, boolean exclude_nulls, Connection con);
+{indent}{class_name} update({class_name} {varname}, boolean exclude_nulls, Query query, Connection con);
 {indent}
-{indent}void update({class_name} {varname}, boolean exclude_nulls);"""
+{indent}{class_name} update({class_name} {varname}, boolean exclude_nulls);"""
 
 if noupdate:
     update = ""
@@ -1102,7 +1198,14 @@ with open(str(serviceint_path), mode="w+") as f:
 
 print("Files saved in " + str(data_dir))
 print(
-    "!!!IMPORTANT!!! Please check the insert and update methods in repo, " + 
-    "in particular for autoincrement columns as parameter"
+"""
+
+!!!IMPORTANT!!! 
+
+* Please check the insert and update methods in repo, in particular for""" + 
+"""autoincrement columns as parameter that does not accept value in insert.
+
+* Remove also in update fields that should never be updated, like createdby or createdon.
+"""
 )
 

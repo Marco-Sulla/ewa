@@ -373,6 +373,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}
 {indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {idswhere}
+{indent}{indent}
 {indent}{indent}try {{
 {indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
 {indent}{indent}}}
@@ -383,6 +384,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}) {{
 {indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
 {indent}{indent}}}
+{indent}{indent}
 {idsparams}
 {indent}{indent}{name} res = query.executeAndFetchFirst({name}.class);
 {indent}{indent}return res;
@@ -390,7 +392,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}
 {indent}@Override
 {indent}public {name} getBy{methid}({idsfirm}, List<String> fields_to_ignore) {{
-{indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("", true)) {{
+{indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("")) {{
 {indent}{indent}{indent}return this.getBy{methid}({idslist}, fields_to_ignore, query, con);
 {indent}{indent}}}
 {indent}}}
@@ -400,6 +402,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}logger.debug("{name}Repository.getAll()");
 {indent}{indent}
 {indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
+{indent}{indent}
 {indent}{indent}try {{
 {indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
 {indent}{indent}}}
@@ -410,13 +413,14 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}) {{
 {indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
 {indent}{indent}}}
+{indent}{indent}
 {indent}{indent}List<{name}> res = query.executeAndFetch({name}.class);
 {indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{name}> getAll(List<String> fields_to_ignore) {{
-{indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("", true)) {{
+{indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("")) {{
 {indent}{indent}{indent}return this.getAll(fields_to_ignore, query, con);
 {indent}{indent}}}
 {indent}}}
@@ -447,7 +451,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}
 {indent}@Override
 {indent}public List<{name}> getByModel({name} {varname}, List<String> fields_to_ignore) {{
-{indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("", true)) {{
+{indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("")) {{
 {indent}{indent}{indent}return this.getByModel({varname}, fields_to_ignore, query, con);
 {indent}{indent}}}
 {indent}}}
@@ -455,6 +459,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}@Override
 {indent}public {name} insert({name} {varname}, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.insert()");
+{indent}{indent}
 {indent}{indent}String sql = (
 {indent}{indent}{indent}"insert into {table_name} ( " + 
 {insert_fields}
@@ -474,6 +479,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}) {{
 {indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
 {indent}{indent}}}
+{indent}{indent}
 {insert_params}
 {indent}{indent}Object key = query.executeUpdate().getKey();
 {indent}{indent}
@@ -517,6 +523,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}@Override
 {indent}public void delete({idsfirm}, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.delete() : {idslog});
+{indent}{indent}
 {indent}{indent}String sql = "delete from {table_name} ";
 {idswhere}
 {indent}{indent}
@@ -530,13 +537,14 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}) {{
 {indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
 {indent}{indent}}}
+{indent}{indent}
 {idsparams}
 {indent}{indent}query.executeUpdate();
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public void delete({idsfirm}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("", true)) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("")) {{
 {indent}{indent}{indent}this.delete({idslist}, query, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}}}
@@ -545,6 +553,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}@Override
 {indent}public void deleteByModel({name} {varname}, Query query, Connection con) {{
 {indent}{indent}logger.debug("{name}Repository.deleteByModel()");
+{indent}{indent}
 {indent}{indent}String sql = "delete from {table_name} ";
 {indent}{indent}sql += "where ";
 {indent}{indent}
@@ -566,7 +575,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}
 {indent}@Override
 {indent}public void deleteByModel({name} {varname}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("", true)) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("")) {{
 {indent}{indent}{indent}this.deleteByModel({varname}, query, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}}}
@@ -608,6 +617,7 @@ if not multiple_ids:
 {indent}{indent}else {{
 {indent}{indent}{indent}res_true = res;
 {indent}{indent}}}
+{indent}{indent}
 {indent}{indent}{varname}.set{methid}(({id_col_type}) res_true);"""
 
     idkey_end = idkey_end_tpl.format(
@@ -645,7 +655,7 @@ update_tpl = """{indent}@Override
 {indent}
 {indent}@Override
 {indent}public {name} update({name} {varname}, boolean exclude_nulls) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("", true)) {{
+{indent}{indent}try (Connection con = sql2o.beginTransaction(); Query query = con.createQuery("")) {{
 {indent}{indent}{indent}{varname} = this.update({varname}, exclude_nulls, query, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}{indent}return {varname};
@@ -1028,6 +1038,7 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}@Override
 {indent}public {class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con) {{
 {indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist}, fields_to_ignore, query, con);
+{indent}{indent}
 {indent}{indent}this.enrich({varname});
 {indent}{indent}
 {indent}{indent}return {varname};
@@ -1036,6 +1047,7 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}@Override
 {indent}public {class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore) {{
 {indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist}, fields_to_ignore);
+{indent}{indent}
 {indent}{indent}this.enrich({varname});
 {indent}{indent}
 {indent}{indent}return {varname};
@@ -1166,8 +1178,7 @@ public interface {class_name}Service {{
 
 """
 
-update_tpl = """
-{indent}
+update_tpl = """{indent}
 {indent}{class_name} update({class_name} {varname}, boolean exclude_nulls, Query query, Connection con);
 {indent}
 {indent}{class_name} update({class_name} {varname}, boolean exclude_nulls);"""

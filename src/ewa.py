@@ -7,7 +7,7 @@ import configparser
 import re
 import sys
 
-VERSION = "3.0.0"
+VERSION = "3.0.1"
 
 try:
     app_dir = Path(__file__).resolve().parent
@@ -40,6 +40,7 @@ config.read(str(config_path))
 class_name = config.get("default", "class_name") # TODO support multiple
 table_name = config.get("default", "table_name").upper()
 ids = config.get("default", "ids").upper().split(",")
+select_methods_prefix = config.get("default", "select_methods_prefix").lowercase()
 
 for i in range(len(ids)):
     ids[i] = ids[i].strip()
@@ -187,7 +188,7 @@ class_end = "}"
 indent = "    "
 field = indent + "private {type} {name};"
 getter = (
-    indent + "public {type} get{methname}() {{\n" + 
+    indent + "public {type} {select_methods_prefix}{methname}() {{\n" + 
     indent + indent + "return {name};\n" + 
     indent + "}}"
 )
@@ -293,7 +294,7 @@ for row in rows:
     col_types[col] = jtype
     fields += field.format(type=jtype, name=name) + "\n"
     methods += (
-        getter.format(type=jtype, methname=methname, name=name) + "\n\n" + 
+        getter.format(type=jtype, methname=methname, name=name, select_methods_prefix=select_methods_prefix) + "\n\n" + 
         setter.format(type=jtype, methname=methname, name=name) + "\n\n"
     )
 
@@ -340,7 +341,8 @@ with open(str(model_path), mode="w+") as f:
 
 
 repo = """package {pack_repo};
-{imports}
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -368,97 +370,103 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}}};
 {indent}
 {indent}@Override
-{indent}public {name} getBy{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con) {{
-{indent}{indent}logger.debug("{name}Repository.getBy{methid}(): {idslog});
+{indent}public {name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}{indent}logger.debug("DB>> {select_methods_prefix}By{methid}() - {idslog});
 {indent}{indent}
 {indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {idswhere}
 {indent}{indent}
-{indent}{indent}try {{
-{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
-{indent}{indent}}}
-{indent}{indent}catch (
-{indent}{indent}{indent}NoSuchFieldException | 
-{indent}{indent}{indent}IllegalArgumentException | 
-{indent}{indent}{indent}IllegalAccessException e
-{indent}{indent}) {{
-{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
-{indent}{indent}}}
+{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
 {indent}{indent}
 {idsparams}
 {indent}{indent}{name} res = query.executeAndFetchFirst({name}.class);
+{indent}{indent}logger.debug("<< DB getBy{methid}() - END");
 {indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {name} getBy{methid}({idsfirm}, List<String> fields_to_ignore) {{
+{indent}public {name} {select_methods_prefix}By{methid}({idsfirm}, Query query, Connection con) {{
+{indent}{indent}return {select_methods_prefix}By{methid}({idslist}, null, Query query, Connection con);
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public {name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore) {{
 {indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("")) {{
-{indent}{indent}{indent}return this.getBy{methid}({idslist}, fields_to_ignore, query, con);
+{indent}{indent}{indent}return this.{select_methods_prefix}By{methid}({idslist}, fields_to_ignore, query, con);
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{name}> getAll(List<String> fields_to_ignore, Query query, Connection con) {{
-{indent}{indent}logger.debug("{name}Repository.getAll()");
+{indent}public {name} {select_methods_prefix}By{methid}({idsfirm}) {{
+{indent}{indent}return this.{select_methods_prefix}By{methid}({idslist}, null);
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public List<{name}> {select_methods_prefix}All(List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}{indent}logger.debug("DB>> {select_methods_prefix}All()");
 {indent}{indent}
 {indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {indent}{indent}
-{indent}{indent}try {{
-{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
-{indent}{indent}}}
-{indent}{indent}catch (
-{indent}{indent}{indent}NoSuchFieldException | 
-{indent}{indent}{indent}IllegalArgumentException | 
-{indent}{indent}{indent}IllegalAccessException e
-{indent}{indent}) {{
-{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
-{indent}{indent}}}
+{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
 {indent}{indent}
 {indent}{indent}List<{name}> res = query.executeAndFetch({name}.class);
+{indent}{indent}logger.debug("<< DB {select_methods_prefix}All() - END");
 {indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{name}> getAll(List<String> fields_to_ignore) {{
+{indent}public List<{name}> {select_methods_prefix}All(Query query, Connection con) {{
+{indent}{indent}return {select_methods_prefix}All(null, Query query, Connection con)
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public List<{name}> {select_methods_prefix}All(List<String> fields_to_ignore) {{
 {indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("")) {{
-{indent}{indent}{indent}return this.getAll(fields_to_ignore, query, con);
+{indent}{indent}{indent}return this.{select_methods_prefix}All(fields_to_ignore, query, con);
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{name}> getByModel({name} {varname}, List<String> fields_to_ignore, Query query, Connection con) {{
-{indent}{indent}logger.debug("{name}Repository.getByModel()");
+{indent}public List<{name}> {select_methods_prefix}All() {{
+{indent}{indent}return {select_methods_prefix}All(null);
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public List<{name}> {select_methods_prefix}ByModel({name} {varname}, List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}{indent}logger.debug("DB>> {select_methods_prefix}ByModel()");
 {indent}{indent}
 {indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {indent}{indent}sql += "where ";
 {indent}{indent}
 {bymodel_where}{indent}{indent}sql = sql.substring(0, sql.length() - 4);
 {indent}{indent}
-{indent}{indent}try {{
-{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
-{indent}{indent}}}
-{indent}{indent}catch (
-{indent}{indent}{indent}NoSuchFieldException | 
-{indent}{indent}{indent}IllegalArgumentException | 
-{indent}{indent}{indent}IllegalAccessException e
-{indent}{indent}) {{
-{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
-{indent}{indent}}}
+{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
 {indent}{indent}
 {bymodel_params}{indent}{indent}List<{name}> res = query.executeAndFetch({name}.class);
+{indent}{indent}logger.debug("<< DB {select_methods_prefix}ByModel() - END");
 {indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{name}> getByModel({name} {varname}, List<String> fields_to_ignore) {{
+{indent}public List<{name}> {select_methods_prefix}ByModel({name} {varname}, Query query, Connection con) {{
+{indent}{indent}return {select_methods_prefix}ByModel({varname}, null Query query, Connection con)
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public List<{name}> {select_methods_prefix}ByModel({name} {varname}, List<String> fields_to_ignore) {{
 {indent}{indent}try (Connection con = sql2o.open(); Query query = con.createQuery("")) {{
-{indent}{indent}{indent}return this.getByModel({varname}, fields_to_ignore, query, con);
+{indent}{indent}{indent}return this.{select_methods_prefix}ByModel({varname}, fields_to_ignore, query, con);
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
+{indent}public List<{name}> {select_methods_prefix}ByModel({name} {varname}) {{
+{indent}{indent}return {select_methods_prefix}ByModel({varname}, null);
+{indent}}}
+{indent}
+{indent}@Override
 {indent}public {name} insert({name} {varname}, Query query, Connection con) {{
-{indent}{indent}logger.debug("{name}Repository.insert()");
+{indent}{indent}logger.info("DB>> insert()");
 {indent}{indent}
 {indent}{indent}String sql = (
 {indent}{indent}{indent}"insert into {table_name} ( " + 
@@ -469,22 +477,13 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}{indent}{indent}")"
 {indent}{indent});
 {indent}{indent}
-{indent}{indent}try {{
-{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
-{indent}{indent}}}
-{indent}{indent}catch (
-{indent}{indent}{indent}NoSuchFieldException | 
-{indent}{indent}{indent}IllegalArgumentException | 
-{indent}{indent}{indent}IllegalAccessException e
-{indent}{indent}) {{
-{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
-{indent}{indent}}}
+{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
 {indent}{indent}
 {insert_params}
 {indent}{indent}Object key = query.executeUpdate().getKey();
 {indent}{indent}
 {idkey}
-{indent}{indent}
+{indent}{indent}logger.info("<< DB insert() - END");
 {indent}{indent}return {varname};
 {indent}}}
 {indent}
@@ -501,7 +500,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}@Override
 {indent}public {name} save({name} {varname}, Query query, Connection con) {{
 {idsinit}
-{indent}{indent}{name} {varname}2 = this.getBy{methid}({idslist}, null, query, con);
+{indent}{indent}{name} {varname}2 = this.{select_methods_prefix}By{methid}({idslist}, null, query, con);
 {indent}{indent}
 {indent}{indent}if ({varname}2 == null) {{
 {indent}{indent}{indent}return this.insert({varname}, query, con);
@@ -522,24 +521,16 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}
 {indent}@Override
 {indent}public void delete({idsfirm}, Query query, Connection con) {{
-{indent}{indent}logger.debug("{name}Repository.delete() : {idslog});
+{indent}{indent}logger.info("DB>> delete() - {idslog});
 {indent}{indent}
 {indent}{indent}String sql = "delete from {table_name} ";
 {idswhere}
 {indent}{indent}
-{indent}{indent}try {{
-{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
-{indent}{indent}}}
-{indent}{indent}catch (
-{indent}{indent}{indent}NoSuchFieldException | 
-{indent}{indent}{indent}IllegalArgumentException | 
-{indent}{indent}{indent}IllegalAccessException e
-{indent}{indent}) {{
-{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
-{indent}{indent}}}
+{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
 {indent}{indent}
 {idsparams}
 {indent}{indent}query.executeUpdate();
+{indent}{indent}logger.info("<< DB delete() - END");
 {indent}}}
 {indent}
 {indent}@Override
@@ -552,25 +543,17 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}
 {indent}@Override
 {indent}public void deleteByModel({name} {varname}, Query query, Connection con) {{
-{indent}{indent}logger.debug("{name}Repository.deleteByModel()");
+{indent}{indent}logger.info("DB>> deleteByModel()");
 {indent}{indent}
 {indent}{indent}String sql = "delete from {table_name} ";
 {indent}{indent}sql += "where ";
 {indent}{indent}
 {bymodel_where}{indent}{indent}sql = sql.substring(0, sql.length() - 4);
 {indent}{indent}
-{indent}{indent}try {{
-{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
-{indent}{indent}}}
-{indent}{indent}catch (
-{indent}{indent}{indent}NoSuchFieldException | 
-{indent}{indent}{indent}IllegalArgumentException | 
-{indent}{indent}{indent}IllegalAccessException e
-{indent}{indent}) {{
-{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
-{indent}{indent}}}
+{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
 {indent}{indent}
 {bymodel_params}{indent}{indent}query.executeUpdate();
+{bymodel_params}logger.info("<< DB deleteByModel() - END");
 {indent}}}
 {indent}
 {indent}@Override
@@ -592,11 +575,7 @@ idkey = "";
 if not multiple_ids:
     idkey_mssql_tpl = "{indent}{indent}Object res = key;"
 
-    idkey_oracle_tpl = """{indent}{indent}String sqlId = "SELECT {id0} FROM {table_name} WHERE rowid  = :key";
-    {indent}{indent}Query queryid = con.createQuery(sqlId);
-    {indent}{indent}queryid.addParameter("key", key);
-    {indent}{indent}Object res = queryid.executeAndFetchFirst(Long.class);
-    {indent}{indent}queryid.close();"""
+    idkey_oracle_tpl = """{indent}{indent}Object res = Sql2oUtility.getInsertedId({table_name}, {id0}, con, key);"""
 
     if dtype == "mssql":
         idkey = idkey_mssql_tpl.format(indent=indent)
@@ -611,7 +590,7 @@ if not multiple_ids:
 {indent}{indent}
 {indent}{indent}Object res_true;
 {indent}{indent}
-{indent}{indent}if (res != null && res instanceof BigDecimal) {{
+{indent}{indent}if (res != null && ({id_col_type}.class == Long.class || {id_col_type}.class == BigInteger.class)) {{
 {indent}{indent}{indent}res_true = ((BigDecimal) res).longValue();
 {indent}{indent}}}
 {indent}{indent}else {{
@@ -631,25 +610,17 @@ if not multiple_ids:
 
 update_tpl = """{indent}@Override
 {indent}public {name} update({name} {varname}, boolean exclude_nulls, Query query, Connection con) {{
-{indent}{indent}logger.debug("{name}Repository.update()");
+{indent}{indent}logger.info("DB>> update() - {idslog}");
 {indent}{indent}
 {indent}{indent}String sql = "update {table_name} set ";
 {indent}{indent}
 {update_fields}{indent}{indent}sql = sql.substring(0, sql.length() - 2) + " ";
 {idswhere}
 {indent}{indent}
-{indent}{indent}try {{
-{indent}{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
-{indent}{indent}}}
-{indent}{indent}catch (
-{indent}{indent}{indent}NoSuchFieldException | 
-{indent}{indent}{indent}IllegalArgumentException | 
-{indent}{indent}{indent}IllegalAccessException e
-{indent}{indent}) {{
-{indent}{indent}{indent}throw new Sql2oException("Unable to set sql to query");
-{indent}{indent}}}
+{indent}{indent}Sql2oUtility.setSqlToQuery(query, sql);
 {indent}{indent}
 {update_params}{indent}{indent}query.executeUpdate();
+{indent}{indent}logger.info("<< DB update() - END");
 {indent}{indent}return {varname};
 {indent}}}
 {indent}
@@ -690,12 +661,13 @@ for id in ids:
         varid = varid
     )
     
-    idsinit += '{indent}{indent}{col_type} {varid} = {varname}.get{methid}();\n'.format(
+    idsinit += '{indent}{indent}{col_type} {varid} = {varname}.{select_methods_prefix}{methid}();\n'.format(
         indent = indent, 
         col_type = col_type,
         varid = varid,
         varname = varname,
-        methid = methid
+        methid = methid,
+        select_methods_prefix = select_methods_prefix,
     )
     
     idsparams += '{indent}{indent}query.addParameter("{varid}", {varid});\n'.format(indent=indent, varid=id.lower())
@@ -775,55 +747,59 @@ for i, col in enumerate(col_types):
     insert_fields += indent + indent + indent + indent + '"{}, " + \n'.format(col)
     insert_vars += indent + indent + indent + indent + '":{}, " + \n'.format(col.lower())
     
-    update_params += '''{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{
-{indent}{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());
+    update_params += '''{indent}{indent}if (! exclude_nulls || {varname}.{select_methods_prefix}{methcol}() != null) {{
+{indent}{indent}{indent}query.addParameter("{colname}", {varname}.{select_methods_prefix}{methcol}());
 {indent}{indent}}}
 {indent}{indent}
 '''.format(
         colname = colname,
         varname = varname,
         methcol = methcol,
-        indent = indent
+        indent = indent,
+        select_methods_prefix = select_methods_prefix,
     )
     
-    bymodel_params += '''{indent}{indent}if ({varname}.get{methcol}() != null) {{
-{indent}{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());
+    bymodel_params += '''{indent}{indent}if ({varname}.{select_methods_prefix}{methcol}() != null) {{
+{indent}{indent}{indent}query.addParameter("{colname}", {varname}.{select_methods_prefix}{methcol}());
 {indent}{indent}}}
 {indent}{indent}
 '''.format(
         colname = colname,
         varname = varname,
         methcol = methcol,
-        indent = indent
+        indent = indent,
+        select_methods_prefix = select_methods_prefix,
     )
     
     noupdate = False
 
-    bymodel_where += '''{indent}{indent}if ({varname}.get{methcol}() != null) {{ 
+    bymodel_where += '''{indent}{indent}if ({varname}.{select_methods_prefix}{methcol}() != null) {{ 
 {indent}{indent}{indent} sql += "{col} = :{colname} and ";
 {indent}{indent}}}
 {indent}{indent}
 '''.format(
-    col=col, 
-    colname=colname, 
-    indent=indent, 
-    varname=varname, 
-    methcol=methcol
+    col = col, 
+    colname = colname, 
+    indent = indent, 
+    varname = varname, 
+    methcol = methcol,
+    select_methods_prefix = select_methods_prefix,
 )
     
     if col not in ids:
         noupdate = False
         
-        update_fields += '''{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{ 
+        update_fields += '''{indent}{indent}if (! exclude_nulls || {varname}.{select_methods_prefix}{methcol}() != null) {{ 
 {indent}{indent}{indent} sql += "{col} = :{colname}, ";
 {indent}{indent}}}
 {indent}{indent}
 '''.format(
-    col=col, 
-    colname=colname, 
-    indent=indent, 
-    varname=varname, 
-    methcol=methcol
+    col = col, 
+    colname = colname, 
+    indent = indent, 
+    varname = varname, 
+    methcol = methcol,
+    select_methods_prefix = select_methods_prefix,
 )
 
 select_fields += """{indent}{indent}res = res.substring(0, res.length() - 2);
@@ -882,6 +858,7 @@ repo_res = repo.format(
     update = update,
     save = save,
     idkey = idkey,
+    select_methods_prefix = select_methods_prefix,
 )
 
 repo_dir = data_dir / pack_repo.replace(".", "/")
@@ -902,9 +879,13 @@ import org.sql2o.Query;
 import {pack_model}.{class_name};
 
 public interface {class_name}Repository {{
-{indent}{class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con);
+{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}{class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore);
+{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, Query query, Connection con);
+{indent}
+{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore);
+{indent}
+{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm});
 {indent}
 {indent}{class_name} insert({class_name} {varname}, Query query, Connection con);
 {indent}
@@ -915,13 +896,21 @@ public interface {class_name}Repository {{
 {indent}
 {indent}{class_name} save({class_name} {varname});
 {indent}
-{indent}List<{class_name}> getAll(List<String> fields_to_ignore, Query query, Connection con);
+{indent}List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}List<{class_name}> getAll(List<String> fields_to_ignore);
+{indent}List<{class_name}> {select_methods_prefix}All(List<String> Query query, Connection con);
 {indent}
-{indent}List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con);
+{indent}List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore);
 {indent}
-{indent}List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore);
+{indent}List<{class_name}> {select_methods_prefix}All();
+{indent}
+{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con);
+{indent}
+{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, Query query, Connection con);
+{indent}
+{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore);
+{indent}
+{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname});
 {indent}
 {indent}void delete({idsfirm}, Query query, Connection con);
 {indent}
@@ -958,7 +947,8 @@ repoint_res = repoint.format(
     idsfirm = idsfirm,
     pack_repo = pack_repo,
     pack_model = pack_model,
-    update = update
+    update = update,
+    select_methods_prefix = select_methods_prefix,
 )
 
 repoint_path = repo_dir / (class_name + "Repository.java")
@@ -1000,8 +990,8 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> getAll(List<String> fields_to_ignore, Query query, Connection con) {{
-{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getAll(fields_to_ignore, query, con);
+{indent}public List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}All(fields_to_ignore, query, con);
 {indent}{indent}
 {indent}{indent}this.enrich({varname}s);
 {indent}{indent}
@@ -1009,8 +999,8 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> getAll(List<String> fields_to_ignore) {{
-{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getAll(fields_to_ignore);
+{indent}public List<{class_name}> {select_methods_prefix}All(Query query, Connection con) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}All(query, con);
 {indent}{indent}
 {indent}{indent}this.enrich({varname}s);
 {indent}{indent}
@@ -1018,8 +1008,8 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con) {{
-{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getByModel({varname}, fields_to_ignore, query, con);
+{indent}public List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}All(fields_to_ignore);
 {indent}{indent}
 {indent}{indent}this.enrich({varname}s);
 {indent}{indent}
@@ -1027,8 +1017,8 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore) {{
-{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.getByModel({varname}, fields_to_ignore);
+{indent}public List<{class_name}> {select_methods_prefix}All() {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}All();
 {indent}{indent}
 {indent}{indent}this.enrich({varname}s);
 {indent}{indent}
@@ -1036,8 +1026,44 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con) {{
-{indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist}, fields_to_ignore, query, con);
+{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}ByModel({varname}, fields_to_ignore, query, con);
+{indent}{indent}
+{indent}{indent}this.enrich({varname}s);
+{indent}{indent}
+{indent}{indent}return {varname}s;
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, Query query, Connection con) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}ByModel({varname}, query, con);
+{indent}{indent}
+{indent}{indent}this.enrich({varname}s);
+{indent}{indent}
+{indent}{indent}return {varname}s;
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}ByModel({varname}, fields_to_ignore);
+{indent}{indent}
+{indent}{indent}this.enrich({varname}s);
+{indent}{indent}
+{indent}{indent}return {varname}s;
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}) {{
+{indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}ByModel({varname});
+{indent}{indent}
+{indent}{indent}this.enrich({varname}s);
+{indent}{indent}
+{indent}{indent}return {varname}s;
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}{indent}{class_name} {varname} = {varname}Repository.{select_methods_prefix}By{methid}({idslist}, fields_to_ignore, query, con);
 {indent}{indent}
 {indent}{indent}this.enrich({varname});
 {indent}{indent}
@@ -1045,8 +1071,26 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore) {{
-{indent}{indent}{class_name} {varname} = {varname}Repository.getBy{methid}({idslist}, fields_to_ignore);
+{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, Query query, Connection con) {{
+{indent}{indent}{class_name} {varname} = {varname}Repository.{select_methods_prefix}By{methid}({idslist}, query, con);
+{indent}{indent}
+{indent}{indent}this.enrich({varname});
+{indent}{indent}
+{indent}{indent}return {varname};
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore) {{
+{indent}{indent}{class_name} {varname} = {varname}Repository.{select_methods_prefix}By{methid}({idslist}, fields_to_ignore);
+{indent}{indent}
+{indent}{indent}this.enrich({varname});
+{indent}{indent}
+{indent}{indent}return {varname};
+{indent}}}
+{indent}
+{indent}@Override
+{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}) {{
+{indent}{indent}{class_name} {varname} = {varname}Repository.{select_methods_prefix}By{methid}({idslist});
 {indent}{indent}
 {indent}{indent}this.enrich({varname});
 {indent}{indent}
@@ -1125,7 +1169,8 @@ service_res = service.format(
     pack_model = pack_model,
     pack_repo = pack_repo,
     pack_service = pack_service,
-    update = update
+    update = update,
+    select_methods_prefix = select_methods_prefix,
 )
 
 service_dir = data_dir / pack_service.replace(".", "/")
@@ -1146,9 +1191,13 @@ import org.sql2o.Query;
 import {pack_model}.{class_name};
 
 public interface {class_name}Service {{
-{indent}{class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con);
+{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}{class_name} getBy{methid}({idsfirm}, List<String> fields_to_ignore);
+{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, Query query, Connection con);
+{indent}
+{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore);
+{indent}
+{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm});
 {indent}
 {indent}{class_name} insert({class_name} {varname}, Query query, Connection con);
 {indent}
@@ -1159,13 +1208,21 @@ public interface {class_name}Service {{
 {indent}
 {indent}{class_name} save({class_name} {varname});
 {indent}
-{indent}List<{class_name}> getAll(List<String> fields_to_ignore, Query query, Connection con);
+{indent}List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}List<{class_name}> getAll(List<String> fields_to_ignore);
+{indent}List<{class_name}> {select_methods_prefix}All(Query query, Connection con);
 {indent}
-{indent}List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con);
+{indent}List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore);
 {indent}
-{indent}List<{class_name}> getByModel({class_name} {varname}, List<String> fields_to_ignore);
+{indent}List<{class_name}> {select_methods_prefix}All();
+{indent}
+{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con);
+{indent}
+{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, Query query, Connection con);
+{indent}
+{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore);
+{indent}
+{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname});
 {indent}
 {indent}void delete({idsfirm}, Query query, Connection con);
 {indent}
@@ -1217,6 +1274,9 @@ print(
 """autoincrement columns as parameter that does not accept value in insert.
 
 * Remove also in update fields that should never be updated, like createdby or createdon.
+
+* If you want, you can also add a toString() to models and enrich the logging of""" + 
+"""getByModel, deleteByModel and insert
 """
 )
 

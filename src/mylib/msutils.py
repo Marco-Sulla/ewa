@@ -99,7 +99,7 @@ def getLastDayOfMonth(date):
 
 def mkdirP(path):
     try:
-        os.makedirs(path, mode=0o700)
+        os.makedirs(path, mode=0o700, exist_ok=True)
     except OSError as e:
         if not (e.errno == errno.EEXIST and os.path.isdir(path)):
             raise

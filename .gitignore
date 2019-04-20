@@ -102,3 +102,4 @@ ENV/
 
 # custom
 /src/italo.ini
+/src/data/

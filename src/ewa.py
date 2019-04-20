@@ -1307,6 +1307,149 @@ with open(str(aggregator_path), mode="w+") as f:
     f.write(aggregator)
 
 
+reflection_tpl = """{pack_utility};
+
+import java.lang.reflect.Field;
+
+public class ReflectionUtility {{
+    /**
+     * Sets a field value on a given object
+     * 
+     * @author Alex Burdusel (https://stackoverflow.com/a/43079379/1763602)
+     * 
+     * @param targetObject the object to set the field value on
+     * @param fieldName exact name of the field
+     * @param fieldValue value to set on the field
+     * @return true if the value was successfully set, false otherwise
+     * @throws NoSuchFieldException 
+     * @throws IllegalAccessException 
+     * @throws IllegalArgumentException 
+     */
+    public static void setField(
+        final Object targetObject, 
+        final String fieldName, 
+        final Object fieldValue
+    ) throws NoSuchFieldException, IllegalArgumentException, IllegalAccessException {{
+        Field field;
+        final Class<? extends Object> klass = targetObject.getClass();
+        
+        try {{
+            field = klass.getDeclaredField(fieldName);
+        }}
+        catch (final NoSuchFieldException e) {{
+            field = null;
+        }}
+        
+        Class<?> superClass = targetObject.getClass().getSuperclass();
+        
+        while (field == null && superClass != null) {{
+            try {{
+                field = superClass.getDeclaredField(fieldName);
+            }}
+            catch (final NoSuchFieldException e) {{
+                superClass = superClass.getSuperclass();
+            }}
+        }}
+        
+        if (field == null) {{
+            throw new NoSuchFieldException("No field with name " + fieldName + "in class " + klass);
+        }}
+        
+        final boolean accessible = field.isAccessible();
+        
+        field.setAccessible(true);
+        
+        try {{
+            field.set(targetObject, fieldValue);
+        }}
+        finally {{
+            field.setAccessible(accessible);
+        }}
+    }}
+}}
+
+"""
+
+reflection = reflection_tpl.format(pack_utility=pack_utility)
+
+reflection_dir = data_dir / pack_utility.replace(".", "/")
+msutils.mkdirP(str(reflection_dir))
+reflection_path = reflection_dir / "ReflectionUtility.java"
+
+with open(str(reflection_path), mode="w+") as f:
+    f.write(reflection)
+
+
+sql2outility_tpl = """package {pack_utility};
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.sql2o.Connection;
+import org.sql2o.Query;
+import org.sql2o.Sql2o;
+import org.sql2o.Sql2oException;
+
+@Component
+public class Sql2oUtility {{
+	private static Sql2o sql2o;
+    
+    @Autowired
+    public void setSql2o(final Sql2o sql2o) {{
+    	Sql2oUtility.sql2o = sql2o;
+    }}
+
+    public static Object getInsertedId(
+        String table, 
+        String idfield, 
+        Connection con, 
+        Object key
+    ) {{
+        try (Query queryid = con.createQuery("SELECT " + idfield + " FROM " + table + " WHERE rowid  = :key")) {{
+            queryid.addParameter("key", key);
+            Object obj = queryid.executeAndFetchFirst(Object.class);
+            return obj;
+        }}  
+    }}
+	
+	public static void setSqlToQueryWithExceptions(
+	    final Query query, 
+	    final String sql
+    ) throws NoSuchFieldException, IllegalArgumentException, IllegalAccessException {{
+	    String parsedQuery = sql2o
+	        .getQuirks()
+	        .getSqlParameterParsingStrategy()
+	        .parseSql(sql, query.getParamNameToIdxMap());
+	    
+	    ReflectionUtility.setField(query, "parsedQuery", parsedQuery);
+	}}
+    
+    public static void setSqlToQuery(
+        final Query query, 
+        final String sql
+    ) {{
+        try {{
+            setSqlToQueryWithExceptions(query, sql);
+        }}
+        catch (
+            NoSuchFieldException | 
+            IllegalArgumentException | 
+            IllegalAccessException e
+        ) {{
+            throw new Sql2oException("Unable to set sql to query");
+        }}
+    }}
+}}
+"""
+
+sql2outility = sql2outility_tpl.format(pack_utility=pack_utility)
+
+sql2outility_dir = data_dir / pack_utility.replace(".", "/")
+msutils.mkdirP(str(sql2outility_dir))
+sql2outility_path = sql2outility_dir / "Sql2oUtility.java"
+
+with open(str(sql2outility_path), mode="w+") as f:
+    f.write(sql2outility)
+
 print("Files saved in " + str(data_dir))
 print(
 """

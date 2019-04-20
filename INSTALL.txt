@@ -1,5 +1,7 @@
 # Linux steps
 
+Requires Python 3.4+
+
 1) Download the project from https://github.com/MarcoSulla/ewa/archive/master.zip
 2) extract the files where you want
 2) open a shell

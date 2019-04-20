@@ -38,6 +38,8 @@ config = configparser.ConfigParser()
 config.read(str(config_path))
 
 class_name = config.get("default", "class_name") # TODO support multiple
+aggregator_name = "{class_name}Aggregator".format(class_name=class_name)
+aggregator_var = aggregator_name[0].lower() + aggregator_name[1:]
 table_name = config.get("default", "table_name").upper()
 ids = config.get("default", "ids").upper().split(",")
 select_methods_prefix = config.get("default", "select_methods_prefix")
@@ -75,6 +77,7 @@ else:
     raise ValueError("Invalid value for service name: " + service_name_str)
 
 pack_model = config.get("packages", "model")
+pack_aggregator = config.get("packages", "aggregator")
 pack_repo = config.get("packages", "repository")
 pack_service = config.get("packages", "service")
 pack_utility = config.get("packages", "utility")
@@ -189,12 +192,12 @@ class_start = """package {pack_model};
 {imports}
 public class {class_name} {{"""
 
-class_end = "}"
+class_end = "}\n"
 indent = "    "
 field = indent + "private {type} {name};"
 getter = (
-    indent + "public {type} {select_methods_prefix}{methname}() {{\n" + 
-    indent + indent + "return {name};\n" + 
+    indent + "public {type} get{methname}() {{\n" + 
+    indent + indent + "return this.{name};\n" + 
     indent + "}}"
 )
 setter = (
@@ -391,7 +394,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}
 {indent}@Override
 {indent}public {name} {select_methods_prefix}By{methid}({idsfirm}, Query query, Connection con) {{
-{indent}{indent}return {select_methods_prefix}By{methid}({idslist}, null, Query query, Connection con);
+{indent}{indent}return {select_methods_prefix}By{methid}({idslist}, null, query, con);
 {indent}}}
 {indent}
 {indent}@Override
@@ -421,7 +424,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}
 {indent}@Override
 {indent}public List<{name}> {select_methods_prefix}All(Query query, Connection con) {{
-{indent}{indent}return {select_methods_prefix}All(null, Query query, Connection con)
+{indent}{indent}return {select_methods_prefix}All(null, query, con);
 {indent}}}
 {indent}
 {indent}@Override
@@ -454,7 +457,7 @@ public class {name}RepositoryImpl implements {name}Repository {{
 {indent}
 {indent}@Override
 {indent}public List<{name}> {select_methods_prefix}ByModel({name} {varname}, Query query, Connection con) {{
-{indent}{indent}return {select_methods_prefix}ByModel({varname}, null Query query, Connection con)
+{indent}{indent}return {select_methods_prefix}ByModel({varname}, null, query, con);
 {indent}}}
 {indent}
 {indent}@Override
@@ -580,7 +583,7 @@ idkey = "";
 if not multiple_ids:
     idkey_mssql_tpl = "{indent}{indent}Object res = key;"
 
-    idkey_oracle_tpl = """{indent}{indent}Object res = Sql2oUtility.getInsertedId({table_name}, {id0}, con, key);"""
+    idkey_oracle_tpl = """{indent}{indent}Object res = Sql2oUtility.getInsertedId("{table_name}", "{id0}", con, key);"""
 
     if dtype == "mssql":
         idkey = idkey_mssql_tpl.format(indent=indent)
@@ -594,8 +597,8 @@ if not multiple_ids:
     idkey_end_tpl = """
 {indent}{indent}
 {indent}{indent}Object res_true;
-{indent}{indent}
-{indent}{indent}if (res != null && ({id_col_type}.class == Long.class || {id_col_type}.class == BigInteger.class)) {{
+{indent}{indent}Class<?> klass = {id_col_type}.class;
+{indent}{indent}if (res != null && (klass == Long.class || klass == BigInteger.class)) {{
 {indent}{indent}{indent}res_true = ((BigDecimal) res).longValue();
 {indent}{indent}}}
 {indent}{indent}else {{
@@ -615,7 +618,7 @@ if not multiple_ids:
 
 update_tpl = """{indent}@Override
 {indent}public {name} update({name} {varname}, boolean exclude_nulls, Query query, Connection con) {{
-{indent}{indent}logger.info("DB>> update() - {idslog}");
+{indent}{indent}logger.info("DB>> update() - {idslog_update});
 {indent}{indent}
 {indent}{indent}String sql = "update {table_name} set ";
 {indent}{indent}
@@ -643,6 +646,7 @@ update_tpl = """{indent}@Override
 
 idsfirm = ""
 idslog = ""
+idslog_update = ""
 idswhere = '{indent}{indent}sql += "where "; \n'.format(indent=indent)
 idsinit = ""
 idsparams = ""
@@ -659,6 +663,11 @@ for id in ids:
     
     idsfirm += "{} {}, ".format(col_type, id.lower())
     idslog += '{varid}: " + {varid} + "'.format(varid=varid)
+    idslog_update += '{varid}: " + {varname}.get{methid}() + "'.format(
+        varid = varid, 
+        varname = varname, 
+        methid = methid, 
+    )
     
     idswhere += '{indent}{indent}sql += "{id} = :{varid} and "; \n'.format(
         indent = indent, 
@@ -666,7 +675,7 @@ for id in ids:
         varid = varid
     )
     
-    idsinit += '{indent}{indent}{col_type} {varid} = {varname}.{select_methods_prefix}{methid}();\n'.format(
+    idsinit += '{indent}{indent}{col_type} {varid} = {varname}.get{methid}();\n'.format(
         indent = indent, 
         col_type = col_type,
         varid = varid,
@@ -681,6 +690,7 @@ for id in ids:
 
 idsfirm = idsfirm[:-2]
 idslog = idslog[:-4]
+idslog_update = idslog_update[:-4]
 idswhere = idswhere[:-8] + '";'
 idslist = idslist[:-2]
 
@@ -752,8 +762,8 @@ for i, col in enumerate(col_types):
     insert_fields += indent + indent + indent + indent + '"{}, " + \n'.format(col)
     insert_vars += indent + indent + indent + indent + '":{}, " + \n'.format(col.lower())
     
-    update_params += '''{indent}{indent}if (! exclude_nulls || {varname}.{select_methods_prefix}{methcol}() != null) {{
-{indent}{indent}{indent}query.addParameter("{colname}", {varname}.{select_methods_prefix}{methcol}());
+    update_params += '''{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{
+{indent}{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());
 {indent}{indent}}}
 {indent}{indent}
 '''.format(
@@ -764,8 +774,8 @@ for i, col in enumerate(col_types):
         select_methods_prefix = select_methods_prefix,
     )
     
-    bymodel_params += '''{indent}{indent}if ({varname}.{select_methods_prefix}{methcol}() != null) {{
-{indent}{indent}{indent}query.addParameter("{colname}", {varname}.{select_methods_prefix}{methcol}());
+    bymodel_params += '''{indent}{indent}if ({varname}.get{methcol}() != null) {{
+{indent}{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());
 {indent}{indent}}}
 {indent}{indent}
 '''.format(
@@ -778,7 +788,7 @@ for i, col in enumerate(col_types):
     
     noupdate = False
 
-    bymodel_where += '''{indent}{indent}if ({varname}.{select_methods_prefix}{methcol}() != null) {{ 
+    bymodel_where += '''{indent}{indent}if ({varname}.get{methcol}() != null) {{ 
 {indent}{indent}{indent} sql += "{col} = :{colname} and ";
 {indent}{indent}}}
 {indent}{indent}
@@ -794,7 +804,7 @@ for i, col in enumerate(col_types):
     if col not in ids:
         noupdate = False
         
-        update_fields += '''{indent}{indent}if (! exclude_nulls || {varname}.{select_methods_prefix}{methcol}() != null) {{ 
+        update_fields += '''{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{ 
 {indent}{indent}{indent} sql += "{col} = :{colname}, ";
 {indent}{indent}}}
 {indent}{indent}
@@ -828,7 +838,7 @@ else:
         update_fields = update_fields, 
         varname = varname, 
         update_params = update_params,
-        idslog = idslog, 
+        idslog_update = idslog_update, 
     )
     
     save = save_tpl.format(
@@ -904,7 +914,7 @@ public interface {class_name}Repository {{
 {indent}
 {indent}List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}List<{class_name}> {select_methods_prefix}All(List<String> Query query, Connection con);
+{indent}List<{class_name}> {select_methods_prefix}All(Query query, Connection con);
 {indent}
 {indent}List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore);
 {indent}
@@ -965,6 +975,7 @@ with open(str(repoint_path), mode="w+") as f:
 
 service = """package {pack_service};
 {imports}
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -972,6 +983,7 @@ import org.springframework.stereotype.Service;
 import org.sql2o.Connection;
 import org.sql2o.Query;
 
+import {pack_aggregator}.{aggregator_name};
 import {pack_model}.{class_name};
 import {pack_repo}.{class_name}Repository;
 
@@ -981,126 +993,112 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}@Autowired
 {indent}private {class_name}Repository {varname}Repository;
 {indent}
-{indent}private void enrich({class_name} {varname}) {{
+{indent}private {aggregator_name} enrich({class_name} {varname}) {{
+{indent}{indent}{aggregator_name} {aggregator_var} = null;
+{indent}{indent}
 {indent}{indent}if ({varname} != null) {{
-{indent}{indent}{indent} // TODO add implementation
+{indent}{indent}{indent}{aggregator_var} = new {aggregator_name}();
+{indent}{indent}{indent}
+{indent}{indent}{indent}{aggregator_var}.set{class_name}({varname});
 {indent}{indent}}}
+{indent}{indent}
+{indent}{indent}return {aggregator_var};
 {indent}}}
 {indent}
-{indent}private void enrich(List<{class_name}> {varname}s) {{
+{indent}private List<{aggregator_name}> enrich(List<{class_name}> {varname}s) {{
+{indent}{indent}List<{aggregator_name}> {aggregator_var}s = new ArrayList<>();
+{indent}{indent}
 {indent}{indent}if ({varname}s != null) {{
 {indent}{indent}{indent}for ({class_name} {varname}: {varname}s) {{
-{indent}{indent}{indent}{indent}this.enrich({varname});
+{indent}{indent}{indent}{indent}{aggregator_var}s.add(this.enrich({varname}));
 {indent}{indent}{indent}}}
 {indent}{indent}}}
+{indent}{indent}
+{indent}{indent} return {aggregator_var}s;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}public List<{aggregator_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Query query, Connection con) {{
 {indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}All(fields_to_ignore, query, con);
 {indent}{indent}
-{indent}{indent}this.enrich({varname}s);
-{indent}{indent}
-{indent}{indent}return {varname}s;
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}All(Query query, Connection con) {{
+{indent}public List<{aggregator_name}> {select_methods_prefix}All(Query query, Connection con) {{
 {indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}All(query, con);
 {indent}{indent}
-{indent}{indent}this.enrich({varname}s);
-{indent}{indent}
-{indent}{indent}return {varname}s;
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore) {{
+{indent}public List<{aggregator_name}> {select_methods_prefix}All(List<String> fields_to_ignore) {{
 {indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}All(fields_to_ignore);
 {indent}{indent}
-{indent}{indent}this.enrich({varname}s);
-{indent}{indent}
-{indent}{indent}return {varname}s;
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}All() {{
+{indent}public List<{aggregator_name}> {select_methods_prefix}All() {{
 {indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}All();
 {indent}{indent}
-{indent}{indent}this.enrich({varname}s);
-{indent}{indent}
-{indent}{indent}return {varname}s;
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}public List<{aggregator_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con) {{
 {indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}ByModel({varname}, fields_to_ignore, query, con);
 {indent}{indent}
-{indent}{indent}this.enrich({varname}s);
-{indent}{indent}
-{indent}{indent}return {varname}s;
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, Query query, Connection con) {{
+{indent}public List<{aggregator_name}> {select_methods_prefix}ByModel({class_name} {varname}, Query query, Connection con) {{
 {indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}ByModel({varname}, query, con);
 {indent}{indent}
-{indent}{indent}this.enrich({varname}s);
-{indent}{indent}
-{indent}{indent}return {varname}s;
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore) {{
+{indent}public List<{aggregator_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore) {{
 {indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}ByModel({varname}, fields_to_ignore);
 {indent}{indent}
-{indent}{indent}this.enrich({varname}s);
-{indent}{indent}
-{indent}{indent}return {varname}s;
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}) {{
+{indent}public List<{aggregator_name}> {select_methods_prefix}ByModel({class_name} {varname}) {{
 {indent}{indent}List<{class_name}> {varname}s = {varname}Repository.{select_methods_prefix}ByModel({varname});
 {indent}{indent}
-{indent}{indent}this.enrich({varname}s);
-{indent}{indent}
-{indent}{indent}return {varname}s;
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con) {{
+{indent}public {aggregator_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con) {{
 {indent}{indent}{class_name} {varname} = {varname}Repository.{select_methods_prefix}By{methid}({idslist}, fields_to_ignore, query, con);
 {indent}{indent}
-{indent}{indent}this.enrich({varname});
-{indent}{indent}
-{indent}{indent}return {varname};
+{indent}{indent}return this.enrich({varname});
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, Query query, Connection con) {{
+{indent}public {aggregator_name} {select_methods_prefix}By{methid}({idsfirm}, Query query, Connection con) {{
 {indent}{indent}{class_name} {varname} = {varname}Repository.{select_methods_prefix}By{methid}({idslist}, query, con);
 {indent}{indent}
-{indent}{indent}this.enrich({varname});
-{indent}{indent}
-{indent}{indent}return {varname};
+{indent}{indent}return this.enrich({varname});
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore) {{
+{indent}public {aggregator_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore) {{
 {indent}{indent}{class_name} {varname} = {varname}Repository.{select_methods_prefix}By{methid}({idslist}, fields_to_ignore);
 {indent}{indent}
-{indent}{indent}this.enrich({varname});
-{indent}{indent}
-{indent}{indent}return {varname};
+{indent}{indent}return this.enrich({varname});
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}) {{
+{indent}public {aggregator_name} {select_methods_prefix}By{methid}({idsfirm}) {{
 {indent}{indent}{class_name} {varname} = {varname}Repository.{select_methods_prefix}By{methid}({idslist});
 {indent}{indent}
-{indent}{indent}this.enrich({varname});
-{indent}{indent}
-{indent}{indent}return {varname};
+{indent}{indent}return this.enrich({varname});
 {indent}}}
 {indent}
 {indent}@Override
@@ -1147,8 +1145,7 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 
 """
 
-update_tpl = """
-{indent}
+update_tpl = """{indent}
 {indent}@Override
 {indent}public {class_name} update({class_name} {varname}, boolean exclude_nulls, Query query, Connection con) {{
 {indent}{indent}return {varname}Repository.update({varname}, exclude_nulls, query, con);
@@ -1177,6 +1174,9 @@ service_res = service.format(
     pack_service = pack_service,
     update = update,
     select_methods_prefix = select_methods_prefix,
+    aggregator_name = aggregator_name, 
+    aggregator_var = aggregator_var, 
+    pack_aggregator = pack_aggregator, 
 )
 
 service_dir = data_dir / pack_service.replace(".", "/")
@@ -1194,16 +1194,17 @@ import java.util.List;
 import org.sql2o.Connection;
 import org.sql2o.Query;
 
+import {pack_aggregator}.{aggregator_name};
 import {pack_model}.{class_name};
 
 public interface {class_name}Service {{
-{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con);
+{indent}{aggregator_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, Query query, Connection con);
+{indent}{aggregator_name} {select_methods_prefix}By{methid}({idsfirm}, Query query, Connection con);
 {indent}
-{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore);
+{indent}{aggregator_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore);
 {indent}
-{indent}{class_name} {select_methods_prefix}By{methid}({idsfirm});
+{indent}{aggregator_name} {select_methods_prefix}By{methid}({idsfirm});
 {indent}
 {indent}{class_name} insert({class_name} {varname}, Query query, Connection con);
 {indent}
@@ -1214,21 +1215,21 @@ public interface {class_name}Service {{
 {indent}
 {indent}{class_name} save({class_name} {varname});
 {indent}
-{indent}List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Query query, Connection con);
+{indent}List<{aggregator_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}List<{class_name}> {select_methods_prefix}All(Query query, Connection con);
+{indent}List<{aggregator_name}> {select_methods_prefix}All(Query query, Connection con);
 {indent}
-{indent}List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore);
+{indent}List<{aggregator_name}> {select_methods_prefix}All(List<String> fields_to_ignore);
 {indent}
-{indent}List<{class_name}> {select_methods_prefix}All();
+{indent}List<{aggregator_name}> {select_methods_prefix}All();
 {indent}
-{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con);
+{indent}List<{aggregator_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore, Query query, Connection con);
 {indent}
-{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, Query query, Connection con);
+{indent}List<{aggregator_name}> {select_methods_prefix}ByModel({class_name} {varname}, Query query, Connection con);
 {indent}
-{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore);
+{indent}List<{aggregator_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore);
 {indent}
-{indent}List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname});
+{indent}List<{aggregator_name}> {select_methods_prefix}ByModel({class_name} {varname});
 {indent}
 {indent}void delete({idsfirm}, Query query, Connection con);
 {indent}
@@ -1263,12 +1264,47 @@ serviceint_res = serviceint.format(
     pack_model = pack_model,
     update = update,
     select_methods_prefix = select_methods_prefix,
+    aggregator_name = aggregator_name, 
+    pack_aggregator = pack_aggregator, 
 )
 
 serviceint_path = service_dir / (class_name + "Service.java")
 
 with open(str(serviceint_path), mode="w+") as f:
     f.write(serviceint_res)
+
+
+aggregator_tpl = """package {pack_aggregator};
+
+import {pack_model}.{class_name};
+
+public class {class_name}Aggregator {{
+    private {class_name} {varname};
+
+    public {class_name} get{class_name}() {{
+        return this.{varname};
+    }}
+
+    public void set{class_name}({class_name} {varname}) {{
+        this.{varname} = {varname};
+    }}
+}}
+
+"""
+
+aggregator = aggregator_tpl.format(
+    pack_aggregator = pack_aggregator, 
+    pack_model = pack_model, 
+    class_name = class_name, 
+    varname = varname, 
+)
+
+aggregator_dir = data_dir / pack_aggregator.replace(".", "/")
+msutils.mkdirP(str(aggregator_dir))
+aggregator_path = aggregator_dir / (class_name + "Aggregator.java")
+
+with open(str(aggregator_path), mode="w+") as f:
+    f.write(aggregator)
 
 
 print("Files saved in " + str(data_dir))

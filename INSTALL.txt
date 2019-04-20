@@ -1,11 +1,13 @@
-#INSTALL EWA
+# Linux steps
 
-1) scarica il progetto da https://github.com/MarcoSulla/ewa/
-2) apri un terminale e vai nella cartella del progetto
-3) sudo apt install python3-pip
-4) pip3 install -r packages.txt
-5) cd src/
-6) configurare un .ini definendo db e tabella da importare, prendendo come 
-   esempio config_example.ini
-7) python3 ewa.py --config NOMEFILE.ini
+1) Download the project from https://github.com/MarcoSulla/ewa/archive/master.zip
+2) extract the files where you want
+2) open a shell
+3) go to the extracted folder
+4) > cd ewa-master
+3) > sudo apt install python3-pip
+4) if you want, you can create a virtualenv
+5) > pip3 install -r requirements.txt
+6) See https://github.com/MarcoSulla/ewa/blob/master/README.md#use for using it.
 
+Bye!

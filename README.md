@@ -1,4 +1,4 @@
- # ewa
+# EWA
 Generator of Java code for Spring + [sql2o](https://www.sql2o.org/) projects.
 
 It auto generates, from a database table:

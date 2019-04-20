@@ -19,10 +19,10 @@ It auto generates, from a database table:
 - `Service` has an `enrich()` stub method, for augmenting the `Aggregate` and `List<Aggregate>` objects returned by `Service` method. All `Service` method created by EWA calls `enrich()` by default.
 
 # Install
-See `INSTALL.TXT`
+See [`INSTALL.TXT`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/INSTALL.txt)
 
 # Use
-1. Create a `.ini` file. See `src/config_example.ini`
+1. Create a `.ini` file. See [`src/config_example.ini`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/src/config_example.ini)
 2. `python3 ewa.py --config path/to/your_config.ini`
 3. Read and follow the instructions at the end of script launching
 

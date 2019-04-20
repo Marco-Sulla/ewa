@@ -7,7 +7,7 @@ import configparser
 import re
 import sys
 
-VERSION = "3.0.1"
+VERSION = "1.4.0"
 
 try:
     app_dir = Path(__file__).resolve().parent
@@ -40,7 +40,12 @@ config.read(str(config_path))
 class_name = config.get("default", "class_name") # TODO support multiple
 table_name = config.get("default", "table_name").upper()
 ids = config.get("default", "ids").upper().split(",")
-select_methods_prefix = config.get("default", "select_methods_prefix").lowercase()
+select_methods_prefix = config.get("default", "select_methods_prefix")
+
+if not select_methods_prefix:
+    select_methods_prefix = "get"
+else:
+    select_methods_prefix = select_methods_prefix.lower()
 
 for i in range(len(ids)):
     ids[i] = ids[i].strip()
@@ -822,7 +827,8 @@ else:
         table_name = table_name, 
         update_fields = update_fields, 
         varname = varname, 
-        update_params = update_params
+        update_params = update_params,
+        idslog = idslog, 
     )
     
     save = save_tpl.format(
@@ -1255,7 +1261,8 @@ serviceint_res = serviceint.format(
     indent = indent,
     pack_service = pack_service,
     pack_model = pack_model,
-    update = update
+    update = update,
+    select_methods_prefix = select_methods_prefix,
 )
 
 serviceint_path = service_dir / (class_name + "Service.java")

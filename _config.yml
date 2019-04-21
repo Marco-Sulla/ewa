@@ -1,3 +1,2 @@
 theme: jekyll-theme-merlot
 show_downloads: true
-exclude: [.github, README.md, .gitignore, _config.yml]

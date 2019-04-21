@@ -27,18 +27,6 @@ See [`INSTALL.TXT`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/INST
 2. `python3 ewa.py --config path/to/your_config.ini`
 3. Read and follow the instructions at the end of script launching
 
-# Example of use of a transaction
-
-```
-MyAggregate myAggregate;
-
-try (Connection con = sql2o.open(); Query query = con.createQuery("")) {
-    myAggregate = myService.getByMyid(myid, query, con);
-}
-```
-
-This trick will autoclose the query even if an exception is throwed. This is because the sql of the query is set inside the repository, using reflections. The reflection trick and the ugly `con.createQuery("")` instead of a simple `con.createQuery()` will disappear if [Pull 323](https://github.com/aaberg/sql2o/pull/323) in sql2o github repo will be merged.
-
 # Tested databases
 Oracle 12C+, MSSQL 2012+. Not all field types are currently supported. Please [open an issue](https://github.com/MarcoSulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+) if you want me to add one.
 

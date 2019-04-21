@@ -20,7 +20,7 @@ It auto generates, from a database table:
 - `Service` has an `enrich()` stub method, for augmenting the `Aggregate` and `List<Aggregate>` objects returned by `Service` method. All `Service` method created by EWA calls `enrich()` by default.
 
 # Install
-See [`INSTALL.TXT`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/INSTALL.txt)
+See [`INSTALL.TXT`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/INSTALL.txt) . You can download the program at [Releases](https://github.com/MarcoSulla/ewa/releases).
 
 # Use
 1. Go to `src` folder

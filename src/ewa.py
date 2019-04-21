@@ -20,8 +20,6 @@ app_descr = "Java code generator"
 help_config = "Set the config file to be read"
 help_version = "Print the version and exit"
 
-java_integer_types = ("BigDecimal", "BigInteger", "Long", "Short")
-
 cmd_parser = argparse.ArgumentParser(description=app_descr)
 cmd_parser.add_argument("--config", required=True, help=help_config)
 cmd_parser.add_argument("--version", action="store_true", help=help_version)
@@ -60,7 +58,7 @@ if len(ids) > 1:
 
 integer_instead_of_short = bool(int(config.get("default", "integer_instead_of_short")))
 bigdecimal_instead_of_double = bool(int(config.get("default", "bigdecimal_instead_of_double")))
-biginteger_instead_of_long = bool(int(config.get("default", "biginteger_instead_of_long")))
+bigdecimal_instead_of_long = bool(int(config.get("default", "bigdecimal_instead_of_long")))
 
 dtype = config.get("database", "type")
 user = config.get("database", "user")
@@ -103,7 +101,7 @@ def convertMsSqlToJavaType(
     radix, 
     scale, 
     use_bigdecimal_instead_of_double, 
-    use_biginteger_instead_of_long
+    use_bigdecimal_instead_of_long
 ):
     sql_type = sql_type.lower()
 
@@ -127,8 +125,8 @@ def convertMsSqlToJavaType(
             elif maxn < 2**64:
                 return "Long"
             else:
-                if use_biginteger_instead_of_long:
-                    return "BigInteger"
+                if use_bigdecimal_instead_of_long:
+                    return "BigDecimal"
                 else:
                     return "Long"
         else:
@@ -156,7 +154,7 @@ def convertOracleToJavaType(
     radix, 
     scale, 
     use_bigdecimal_instead_of_double, 
-    use_biginteger_instead_of_long
+    use_bigdecimal_instead_of_long
 ):
     if prec is None:
         prec = 0
@@ -180,8 +178,8 @@ def convertOracleToJavaType(
             elif maxn < 2**64:
                 return "Long"
             else:
-                if use_biginteger_instead_of_long:
-                    return "BigInteger"
+                if use_bigdecimal_instead_of_long:
+                    return "BigDecimal"
                 else:
                     return "Long"
         else:
@@ -271,7 +269,6 @@ rows = engine.execute(get_columns_data_sql.format(table_name))
 fields = ""
 methods = ""
 bigdecimal = False
-biginteger = False
 col_types = {}
 import_date_eff = ""
 
@@ -305,14 +302,11 @@ for row in rows:
         radix, 
         scale, 
         bigdecimal_instead_of_double, 
-        biginteger_instead_of_long
+        bigdecimal_instead_of_long
     )
     
     if jtype == "BigDecimal":
         bigdecimal = True
-    
-    if jtype == "BigInteger":
-        biginteger = True
     
     if jtype == "Date":
         import_date_eff = import_date + "\n"
@@ -339,9 +333,6 @@ imports = ""
 if bigdecimal:
     imports += "import java.math.BigDecimal;\n"
 
-if biginteger:
-    imports += "import java.math.BigInteger;\n"
-
 imports += import_date_eff
 
 if imports:
@@ -367,7 +358,6 @@ if not multiple_ids:
 repo_tpl = (
 """package {pack_repo};
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -636,7 +626,7 @@ if not multiple_ids:
 {indent}{indent}Object res_true;
 {indent}{indent}Class<?> klass = {id_col_type}.class;
 {indent}{indent}
-{indent}{indent}if (res != null && (klass == Long.class || klass == BigInteger.class)) {{
+{indent}{indent}if (res != null && (klass == Long.class || klass == BigDecimal.class)) {{
 {indent}{indent}{indent}res_true = ((BigDecimal) res).longValue();
 {indent}{indent}}}
 {indent}{indent}else {{
@@ -1346,17 +1336,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.sql2o.Connection;
 import org.sql2o.Query;
-import org.sql2o.Sql2o;
 
 @Component
 public class Sql2oUtility {{
-{indent}private static Sql2o sql2o;
-{indent}
-{indent}@Autowired
-{indent}public void setSql2o(final Sql2o sql2o) {{
-{indent}{indent}Sql2oUtility.sql2o = sql2o;
-{indent}}}
-{indent}
 {indent}public static Object getInsertedId(
 {indent}{indent}String table, 
 {indent}{indent}String idfield, 

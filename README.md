@@ -35,5 +35,5 @@ PostgreSql, MySql, MariaDb. Please install the corresponding python3 driver and 
 
 I'm using `sqlalchemy`, so in teory I can support any database that it supports. If you want to add a database, please [open an issue](https://github.com/MarcoSulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+).
 
-# Tested environment
-Spring Boot 2, JDK Oracle 8, sql2o 1.6.0-RC3. It propably works also on Spring 5 and JDK 7.
+# Minimum requirements
+Python 3.4+, Spring Boot 1+, JDK 8+, sql2o 1.4+

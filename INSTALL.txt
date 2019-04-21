@@ -1,6 +1,7 @@
-# Linux steps
+# Requirements
+Requires Python 3.4+, Spring Boot 1+, JDK 8+, sql2o 1.4+
 
-Requires Python 3.4+
+# Linux steps
 
 1) Download the project from https://github.com/MarcoSulla/ewa/archive/master.zip
 2) extract the files where you want

@@ -8,14 +8,14 @@ It auto generates, from a database table:
 - Service
 
 # Features
-- Support for tables with primary key with multiple fields
-- Basic SELECT sql, centralized for all `find` methods. Update it and all `find` methods will be updated
 - `find` methods have an optional `fields_to_ignore` parameter, to filter fields in SELECTs
 - All methods are overloaded with a method with transaction and a method without transaction, if you don't need it
 - Method `findByModel()`, to SELECT from database matching fields populated in model. No need to create `findBySomefield()`
 - Similar method `deleteByModel()` 
 - `save()` method, that first checks for row existance, and then call `insert()` or `update()`
 - `exclude_nulls` optional parameter for `update()`, that does not update fields that are nulls
+- Support for tables with primary key with multiple fields
+- Basic SELECT sql, centralized for all `find` methods. Update it and all `find` methods will be updated
 - `Service` methods returns a [`Aggregate`](https://en.wikipedia.org/wiki/Domain-driven_design#Building_blocks) object, with the model as one of the attributes
 - `Service` has an `enrich()` stub method, for augmenting the `Aggregate` and `List<Aggregate>` objects returned by `Service` method. All `Service` method created by EWA calls `enrich()` by default.
 

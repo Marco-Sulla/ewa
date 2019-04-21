@@ -4,7 +4,6 @@ from pathlib import Path
 import os
 import argparse
 import configparser
-import re
 import sys
 
 VERSION = "1.5.0"
@@ -81,9 +80,6 @@ pack_repo = config.get("packages", "repository")
 pack_service = config.get("packages", "service")
 pack_utility = config.get("packages", "utility")
 
-re_ts = re.compile("timestamp\(\d+\)")
-
-
 data_dir = app_dir / "data" / class_name
 
 def writeToFile(pack, filename, content):
@@ -94,108 +90,6 @@ def writeToFile(pack, filename, content):
     with open(str(path), mode="w+") as f:
         f.write(content)
 
-
-def convertMsSqlToJavaType(
-    sql_type, 
-    prec, 
-    radix, 
-    scale, 
-    use_bigdecimal_instead_of_double, 
-    use_bigdecimal_instead_of_long
-):
-    sql_type = sql_type.lower()
-
-    if prec is None:
-        prec = 0
-
-    if scale is None:
-        scale = 0
-    
-    if sql_type == "numeric":
-        if scale == 0:
-            maxn = radix**(prec - scale)
-            
-            if maxn < 2**16:
-                if integer_instead_of_short:
-                    return "Integer"
-                else:
-                    return "Short"
-            elif maxn < 2**32:
-                return "Integer"
-            elif maxn < 2**64:
-                return "Long"
-            else:
-                if use_bigdecimal_instead_of_long:
-                    return "BigDecimal"
-                else:
-                    return "Long"
-        else:
-            if use_bigdecimal_instead_of_double:
-                return "BigDecimal"
-            else:
-                return "Double"
-        return "Long"
-    elif sql_type == "int":
-        return "Integer"
-    elif sql_type == "datetime2":
-        return "Date"
-    elif sql_type == "timestamp":
-        return "Date"
-    elif sql_type == "varchar":
-        return "String"
-    elif sql_type == "char":
-        return "String"
-    else:
-        raise Exception("Unsupported type: {}".format(sql_type))
-
-def convertOracleToJavaType(
-    sql_type, 
-    prec, 
-    radix, 
-    scale, 
-    use_bigdecimal_instead_of_double, 
-    use_bigdecimal_instead_of_long
-):
-    if prec is None:
-        prec = 0
-
-    if scale is None:
-        scale = 0
-    
-    sql_type = sql_type.lower()
-    
-    if sql_type == "number":
-        
-        if scale == 0:
-            maxn = radix**(prec - scale)
-            if maxn < 2**16:
-                if integer_instead_of_short:
-                    return "Integer"
-                else:
-                    return "Short"
-            elif maxn < 2**32:
-                return "Integer"
-            elif maxn < 2**64:
-                return "Long"
-            else:
-                if use_bigdecimal_instead_of_long:
-                    return "BigDecimal"
-                else:
-                    return "Long"
-        else:
-            if use_bigdecimal_instead_of_double:
-                return "BigDecimal"
-            else:
-                return "Double"
-        return "Long"
-    elif re_ts.match(sql_type):
-        return "Date"
-    elif sql_type in ("varchar", "varchar2", "char"):
-        return "String"
-    elif sql_type == "date":
-        return "Date"
-    else:
-        raise Exception("Unsupported type: {}".format(sql_type))
 
         
 model_start = (
@@ -225,44 +119,15 @@ db_str = msutils.dbString(dtype, user, password, host, port, db_name, service_na
 
 engine = sqlalchemy.engine.create_engine(db_str, echo=False)
 
-get_columns_data_sql_mssql = (
-"""
-SELECT 
-    column_name, 
-    data_type, 
-    numeric_precision, 
-    numeric_precision_radix,
-    numeric_scale,
-    1
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE upper(TABLE_NAME) = N'{}'
-ORDER BY column_name ASC
-"""
-)
-
-get_columns_data_sql_oracle = (
-"""
-SELECT 
-    column_name, 
-    data_type, 
-    data_precision, 
-    data_length, 
-    data_scale,
-    column_id
-FROM ALL_TAB_COLS 
-WHERE UPPER(table_name) = '{}' 
-ORDER BY column_name ASC
-"""
-)
-
 if dtype == "mssql":
-    converter = convertMsSqlToJavaType
-    get_columns_data_sql = get_columns_data_sql_mssql
+    import db.mssql as db
 elif dtype == "oracle":
-    converter = convertOracleToJavaType
-    get_columns_data_sql = get_columns_data_sql_oracle
+    import db.oracle as db
 else:
     raise Exception("Unsupported database: " + dtype)
+
+converter = db.convertToJavaType
+get_columns_data_sql = db.get_columns_data_sql
 
 rows = engine.execute(get_columns_data_sql.format(table_name))
 
@@ -301,6 +166,7 @@ for row in rows:
         prec, 
         radix, 
         scale, 
+        integer_instead_of_short, 
         bigdecimal_instead_of_double, 
         bigdecimal_instead_of_long
     )

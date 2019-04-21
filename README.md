@@ -1,6 +1,6 @@
 # EWA
 
-Generator of Java code for Spring + [sql2o](https://www.sql2o.org/) projects.
+Generator of Java code for Spring Boot + [sql2o](https://www.sql2o.org/) projects.
 
 It auto generates, from a database table:
 - Model

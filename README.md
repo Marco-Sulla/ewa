@@ -31,6 +31,4 @@ See [`INSTALL.TXT`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/INST
 Oracle 12C+, MSSQL 2012+. Not all field types are currently supported. Please [open an issue](https://github.com/MarcoSulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+) if you want me to add one.
 
 # Untested, but potentially working databases
-PostgreSql, MySql, MariaDb. Please install the corresponding python3 driver and see the notes for the "Tested databases"
-
-I'm using `sqlalchemy`, so in teory I can support any database that it supports. If you want to add a database, please [open an issue](https://github.com/MarcoSulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+).
+I'm using `sqlalchemy`, so in teory I can support any database that [it supports](https://docs.sqlalchemy.org/en/13/dialects/). If you want to add a database, please [open an issue](https://github.com/MarcoSulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+).

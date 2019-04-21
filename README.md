@@ -23,8 +23,9 @@ It auto generates, from a database table:
 See [`INSTALL.TXT`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/INSTALL.txt)
 
 # Use
-1. Create a `.ini` file. See [`src/config_example.ini`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/src/config_example.ini)
-2. `python3 ewa.py --config path/to/your_config.ini`
+1. Go to `src` folder
+1. Create a `.ini` file. See [`config_example.ini`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/src/config_example.ini)
+2. `python3 ewa.py --config YOUR_CONFIG.ini`
 3. Read and follow the instructions at the end of script launching
 
 # Tested databases

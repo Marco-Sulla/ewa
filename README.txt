@@ -27,6 +27,7 @@ It auto generates, from a database table:
 - `Service` has an `enrich()` stub method, for augmenting the `Aggregate` and 
   `List<Aggregate>` objects returned by `Service` method. All `Service` method 
   created by EWA calls `enrich()` by default.
+- Configurable indentation style
 
 # Install
 See INSTALL.TXT

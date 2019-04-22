@@ -1,8 +1,6 @@
 import utility.util as util
 
-
-def write(config):
-    sql2outility_tpl = (
+sql2outility_tpl = (
 """{firm}
 
 package {pack_utility};
@@ -27,8 +25,10 @@ public class Sql2oUtility {{
 {indent}}}
 }}
 """
-    )
-    
+)
+
+
+def write(config):
     sql2outility = sql2outility_tpl.format(
         pack_utility = config.pack_utility, 
         indent = config.indent,

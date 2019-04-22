@@ -1,8 +1,6 @@
 import utility.util as util
 
-
-def write(config):
-    repo_tpl = (
+repo_tpl = (
 """{firm}
 
 package {pack_repo};
@@ -247,30 +245,11 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}}}
 }}
 """
-    )
-    
-    save_tpl = (
-"""{indent}{indent}{indent}return this.update({varname}, false, con);
-{indent}{indent}{indent}"""
-    )
-    
-    idkey = ""
-    
-    if not config.multiple_ids:
-        idkey_mssql_tpl = "{indent}{indent}Object res = key;"
-        
-        idkey_oracle_tpl = """{indent}{indent}Object res = Sql2oUtility.getInsertedId("{table_name}", "{id0}", con, key);"""
-        
-        if config.dtype == "mssql":
-            idkey = idkey_mssql_tpl.format(indent=config.indent)
-        elif config.dtype == "oracle":
-            idkey = idkey_oracle_tpl.format(
-                indent=config.indent,
-                id0=config.ids[0],
-                table_name=config.table_name
-            )
-        
-        idkey_end_tpl = (
+)
+
+save_update_tpl = """{indent}{indent}{indent}return this.update({varname}, false, con);"""
+
+idkey_end_tpl = (
 """
 {indent}{indent}
 {indent}{indent}Object res_true;
@@ -284,18 +263,9 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}{indent}}}
 {indent}{indent}
 {indent}{indent}{varname}.set{methid}(({id_col_type}) res_true);"""
-        )
-        
-        idkey_end = idkey_end_tpl.format(
-            indent=config.indent,
-            methid=config.methid,
-            varname=config.varname,
-            id_col_type=config.id_col_type
-        )
-        
-        idkey += idkey_end
-    
-    update_tpl = (
+)
+
+update_tpl = (
 """{indent}@Override
 {indent}public {class_name} update({class_name} {varname}, boolean exclude_nulls, Connection con) {{
 {indent}{indent}logger.info("DB>> update() - {idslog_update});
@@ -324,55 +294,14 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}{indent}}}
 {indent}}}
 {indent}"""
-    )
-    
-    idslog = ""
-    idslog_update = ""
-    idswhere = '{indent}{indent}sql += "where "; \n'.format(indent=config.indent)
-    idsinit = ""
-    idsparams = ""
-    
-    for id in config.ids:
-        col_type = config.col_types[id]
-        varid = id.lower()
-        methid = id[0] + id[1:].lower()
-        
-        idslog += '{varid}: " + {varid} + "'.format(varid=varid)
-        
-        idslog_update += '{varid}: " + {varname}.get{methid}() + "'.format(
-            varid=varid,
-            varname=config.varname,
-            methid=methid,
-        )
-        
-        idswhere += '{indent}{indent}sql += "{id} = :{varid} and "; \n'.format(
-            indent=config.indent,
-            id=id,
-            varid=varid
-        )
-        
-        idsinit += '{indent}{indent}{col_type} {varid} = {varname}.get{methid}();\n'.format(
-            indent=config.indent,
-            col_type=col_type,
-            varid=varid,
-            varname=config.varname,
-            methid=methid,
-            select_methods_prefix=config.select_methods_prefix,
-        )
-        
-        idsparams += '{indent}{indent}{indent}query.addParameter("{varid}", {varid});\n'.format(
-            indent=config.indent,
-            varid=id.lower(),
-        )
-    
-    idslog = idslog[:-4]
-    idslog_update = idslog_update[:-4]
-    idswhere = idswhere[:-8] + '";'
-    
-    select_fields_tpl = '{indent}{indent}String res = "";'
-    
-    select_fields_tpl += (
-"""
+)
+
+idkey_mssql_tpl = "{indent}{indent}Object res = key;"
+
+idkey_oracle_tpl = """{indent}{indent}Object res = Sql2oUtility.getInsertedId("{table_name}", "{id0}", con, key);"""
+
+select_fields_tpl = (
+"""{indent}{indent}String res = "";
 {indent}{indent}
 {indent}{indent}fields_to_ignore = fields_to_ignore
 {indent}{indent}{indent}.stream()
@@ -380,113 +309,206 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}{indent}{indent}.collect(Collectors.toList());
 {indent}{indent}
 """
-    )
-    
-    select_fields = select_fields_tpl.format(indent=config.indent)
-    
-    insert_fields = ""
-    insert_vars = ""
-    update_params_tpl = ""
-    bymodel_params_tpl = ""
-    update_fields_tpl = ""
-    bymodel_where_tpl = ""
-    
-    insert_params = '{indent}{indent}{indent}query.bind({varname});\n'.format(
-        varname=config.varname,
-        indent=config.indent
-    )
-    
-    bymodel_params = ""
-    bymodel_where = ""
-    update_fields = ""
-    update_params = ""
-    
-    for i, col in enumerate(config.col_types):
-        colname = col.lower()
-        methcol = colname[0].upper() + colname[1:]
-        
-        select_field_tpl = '{indent}{indent}if (fields_to_ignore != null && ! fields_to_ignore.contains("{col}")) {{\n'
-        select_field_tpl += '{indent}{indent}{indent}res += "{initial}.{col}, ";\n'
-        
-        select_field_tpl += '{indent}{indent}}}\n{indent}{indent}\n'
-        select_field = select_field_tpl.format(indent=config.indent, initial=config.initial, col=col)
-        select_fields += select_field
-        
-        insert_fields += '{indent}{indent}{indent}{indent}"{col}, " + \n'.format(col=col, indent=config.indent)
-        insert_vars += '{indent}{indent}{indent}{indent}":{col}, " + \n'.format(col=col.lower(), indent=config.indent)
-        
-        update_params_tpl += (
+)
+
+select_field_col_tpl = (
+"""{indent}{indent}if (fields_to_ignore != null && ! fields_to_ignore.contains("{col}")) {{
+{indent}{indent}{indent}res += "{initial}.{col}, ";
+{indent}{indent}}}
+{indent}{indent}
+"""
+)
+
+update_params_col_tpl = (
 """{indent}{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{
 {indent}{indent}{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());
 {indent}{indent}{indent}}}
 {indent}{indent}{indent}
 """
-        )
-        
-        # noinspection PyUnresolvedReferences
-        update_params = update_params_tpl.format(
-            colname=colname,
-            varname=config.varname,
-            methcol=methcol,
-            indent=config.indent,
-            select_methods_prefix=config.select_methods_prefix,
-        )
-        
-        bymodel_params_tpl += (
+)
+
+bymodel_params_col_tpl = (
 """{indent}{indent}{indent}if ({varname}.get{methcol}() != null) {{
 {indent}{indent}{indent}{indent}query.addParameter("{colname}", {varname}.get{methcol}());
 {indent}{indent}{indent}}}
 {indent}{indent}{indent}
 """
-        )
-        bymodel_params = bymodel_params_tpl.format(
-            colname=colname,
-            varname=config.varname,
-            methcol=methcol,
-            indent=config.indent,
-            select_methods_prefix=config.select_methods_prefix,
-        )
-        
-        bymodel_where_tpl += (
+)
+
+bymodel_where_col_tpl = (
 """{indent}{indent}if ({varname}.get{methcol}() != null) {{ 
 {indent}{indent}{indent} sql += "{col} = :{colname} and ";
 {indent}{indent}}}
 {indent}{indent}
 """
-        )
-        
-        bymodel_where = bymodel_where_tpl.format(
-            col=col,
-            colname=colname,
-            indent=config.indent,
-            varname=config.varname,
-            methcol=methcol,
-            select_methods_prefix=config.select_methods_prefix,
-        )
-        
-        if col not in config.ids:
-            update_fields_tpl += (
+)
+
+update_fields_col_tpl = (
 """{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{ 
 {indent}{indent}{indent} sql += "{col} = :{colname}, ";
 {indent}{indent}}}
 {indent}{indent}
 """
-            )
-            
-            update_fields = update_fields_tpl.format(
-                col=col,
-                colname=colname,
-                indent=config.indent,
-                varname=config.varname,
-                methcol=methcol,
-                select_methods_prefix=config.select_methods_prefix,
-            )
-    
-    select_fields_end_tpl = (
+)
+
+select_fields_end_tpl = (
 """{indent}{indent}res = res.substring(0, res.length() - 2);
 {indent}{indent}"""
+)
+
+save_update_null_tpl = "{indent}{indent}{indent}return null;"
+idslog_col_tpl = '{varid}: " + {varid} + "'
+idslog_update_col_tpl = '{varid}: " + {varname}.get{methid}() + "'
+idswhere_col_tpl = '{indent}{indent}sql += "{id} = :{varid} and "; \n'
+idsinit_col_tpl = '{indent}{indent}{col_type} {varid} = {varname}.get{methid}();\n'
+idsparams_col_tpl = '{indent}{indent}{indent}query.addParameter("{varid}", {varid});\n'
+insert_params_tpl = '{indent}{indent}{indent}query.bind({varname});\n'
+insert_fields_col_tpl = '{indent}{indent}{indent}{indent}"{col}, " + \n'
+insert_vars_col_tpl = '{indent}{indent}{indent}{indent}":{col}, " + \n'
+idswhere_init_tpl = '{indent}{indent}sql += "where "; \n'
+
+
+def write(config):
+    idkey = ""
+    
+    if not config.multiple_ids:
+        if config.dtype == "mssql":
+            idkey = idkey_mssql_tpl.format(indent=config.indent)
+        elif config.dtype == "oracle":
+            idkey = idkey_oracle_tpl.format(
+                indent=config.indent,
+                id0=config.ids[0],
+                table_name=config.table_name
+            )
+        
+        idkey_end = idkey_end_tpl.format(
+            indent=config.indent,
+            methid=config.methid,
+            varname=config.varname,
+            id_col_type=config.id_col_type
+        )
+        
+        idkey += idkey_end
+    
+    idslog_tpl = ""
+    idslog_update_tpl = ""
+    idswhere_tpl = idswhere_init_tpl
+    idsinit_tpl = ""
+    idsparams_tpl = ""
+    
+    for id in config.ids:
+        col_type = config.col_types[id]
+        varid = id.lower()
+        methid = id[0] + id[1:].lower()
+
+        idslog_tpl += idslog_col_tpl
+        idslog_update_tpl += idslog_update_col_tpl
+        idswhere_tpl += idswhere_col_tpl
+        idsinit_tpl += idsinit_col_tpl
+        idsparams_tpl += idsparams_col_tpl
+
+    idslog = idslog_tpl.format(varid=varid)
+    idslog = idslog[:-4]
+
+    idslog_update = idslog_update_tpl.format(
+        varid=varid,
+        varname=config.varname,
+        methid=methid,
+    )
+
+    idslog_update = idslog_update[:-4]
+
+    idswhere = idswhere_tpl.format(
+        indent=config.indent,
+        id=id,
+        varid=varid
     )
     
+    idswhere = idswhere[:-8] + '";'
+    
+    select_fields = select_fields_tpl.format(indent=config.indent)
+
+    idsinit = idsinit_tpl.format(
+        indent=config.indent,
+        col_type=col_type,
+        varid=varid,
+        varname=config.varname,
+        methid=methid,
+        select_methods_prefix=config.select_methods_prefix,
+    )
+
+    idsparams = idsparams_tpl.format(
+        indent=config.indent,
+        varid=id.lower(),
+    )
+    
+    update_params_tpl = ""
+    bymodel_params_tpl = ""
+    update_fields_tpl = ""
+    bymodel_where_tpl = ""
+    select_field_body = ""
+    insert_fields = ""
+    insert_vars = ""
+    
+    insert_params = insert_params_tpl.format(
+        varname=config.varname,
+        indent=config.indent
+    )
+    
+    for i, col in enumerate(config.col_types):
+        colname = col.lower()
+        methcol = colname[0].upper() + colname[1:]
+
+        select_field_body += select_field_col_tpl.format(
+            indent=config.indent,
+            initial=config.initial,
+            col=col,
+        )
+
+        insert_fields += insert_fields_col_tpl.format(col=col, indent=config.indent)
+        insert_vars += insert_vars_col_tpl.format(col=col.lower(), indent=config.indent)
+        update_params_tpl += update_params_col_tpl
+        bymodel_params_tpl += bymodel_params_col_tpl
+        bymodel_where_tpl += bymodel_where_col_tpl
+        
+        if col not in config.ids:
+            update_fields_tpl += update_fields_col_tpl
+    
+    update_params = update_params_tpl.format(
+        colname=colname,
+        varname=config.varname,
+        methcol=methcol,
+        indent=config.indent,
+        select_methods_prefix=config.select_methods_prefix,
+    )
+    
+    bymodel_params = bymodel_params_tpl.format(
+        colname=colname,
+        varname=config.varname,
+        methcol=methcol,
+        indent=config.indent,
+        select_methods_prefix=config.select_methods_prefix,
+    )
+
+    bymodel_where = bymodel_where_tpl.format(
+        col=col,
+        colname=colname,
+        indent=config.indent,
+        varname=config.varname,
+        methcol=methcol,
+        select_methods_prefix=config.select_methods_prefix,
+    )
+
+    update_fields = update_fields_tpl.format(
+        col=col,
+        colname=colname,
+        indent=config.indent,
+        varname=config.varname,
+        methcol=methcol,
+        select_methods_prefix=config.select_methods_prefix,
+    )
+
+    select_fields += select_field_body
     select_fields_end = select_fields_end_tpl.format(indent=config.indent)
     select_fields += select_fields_end
     
@@ -498,8 +520,7 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
     
     if config.noupdate:
         update = ""
-        save_tpl = "{indent}{indent}{indent}return null;"
-        save = save_tpl.format(indent=config.indent)
+        save = save_update_null_tpl.format(indent=config.indent)
     else:
         update = update_tpl.format(
             indent=config.indent,
@@ -512,7 +533,7 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
             idslog_update=idslog_update,
         )
         
-        save = save_tpl.format(
+        save = save_update_tpl.format(
             indent=config.indent,
             varname=config.varname
         )

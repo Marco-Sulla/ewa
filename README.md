@@ -18,6 +18,7 @@ It auto generates, from a database table:
 - Basic SELECT sql, centralized for all `find` methods. Update it and all `find` methods will be updated
 - `Service` methods returns a [`Aggregate`](https://en.wikipedia.org/wiki/Domain-driven_design#Building_blocks) object, with the model as one of the attributes
 - `Service` has an `enrich()` stub method, for augmenting the `Aggregate` and `List<Aggregate>` objects returned by `Service` method. All `Service` method created by EWA calls `enrich()` by default.
+- Configurable indentation style
 
 # Install
 See [`INSTALL.TXT`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/INSTALL.txt) . You can download the program at [Releases](https://github.com/MarcoSulla/ewa/releases).

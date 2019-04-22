@@ -1,8 +1,6 @@
 import utility.util as util
 
-
-def write(config):
-    aggregator_tpl = (
+aggregator_tpl = (
 """{firm}
 
 package {pack_aggregator};
@@ -21,8 +19,10 @@ public class {class_name}Aggregator {{
 {indent}}}
 }}
 """
-    )
-    
+)
+
+
+def write(config):
     aggregator = aggregator_tpl.format(
         pack_aggregator = config.pack_aggregator,
         pack_model = config.pack_model,

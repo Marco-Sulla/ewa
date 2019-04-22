@@ -1,8 +1,6 @@
 import utility.util as util
 
-
-def write(config):
-    repoint_tpl = (
+repoint_tpl = (
 """{firm}
 
 package {pack_repo};
@@ -56,15 +54,17 @@ public interface {class_name}Repository {{
 {indent}void deleteByModel({class_name} {varname});
 }}
 """
-    )
-    
-    update_tpl = (
+)
+
+update_tpl = (
 """{indent}
 {indent}{class_name} update({class_name} {varname}, boolean exclude_nulls, Connection con);
 {indent}
 {indent}{class_name} update({class_name} {varname}, boolean exclude_nulls);"""
-    )
-    
+)
+
+
+def write(config):
     if config.noupdate:
         update = ""
     else:

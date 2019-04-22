@@ -1,8 +1,6 @@
 import utility.util as util
 
-
-def write(config):
-    service_tpl = (
+service_tpl = (
 """{firm}
 
 package {pack_service};
@@ -174,9 +172,9 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}}}
 }}
 """
-    )
-    
-    update_tpl = (
+)
+
+update_tpl = (
 """{indent}
 {indent}@Override
 {indent}public {class_name} update({class_name} {varname}, boolean exclude_nulls, Connection con) {{
@@ -187,8 +185,10 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}public {class_name} update({class_name} {varname}, boolean exclude_nulls) {{
 {indent}{indent}return {varname}Repository.update({varname}, exclude_nulls);
 {indent}}}"""
-    )
-    
+)
+
+
+def write(config):
     if config.noupdate:
         update = ""
     else:

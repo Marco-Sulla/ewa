@@ -1,15 +1,16 @@
 import sys
+from builtins import print
+
 from mylib import msutils
 import configparser
 from .version import VERSION
 import sqlalchemy
 from pathlib import Path
+import re
 
 
 class Config:
     def __init__(self, cmd_args, app_dir):
-        indent = "    "
-        self._indent = indent
     
         cmd_dict = vars(cmd_args)
         
@@ -30,6 +31,25 @@ class Config:
         table_name = config.get("default", "table_name").upper()
         self._table_name = table_name
         ids = config.get("default", "ids").upper().split(",")
+        
+        indent_str = config.get("default", "delimiter")
+        
+        if not re.match(r"^\d[st]$", indent_str):
+            err_tpl = "Bad `delimiter` value `{val}` in [default] section of {ini}"
+            print(err_tpl.format(ini=config_path.name, val=indent_str), file=sys.stderr)
+            sys.exit(1)
+        
+        indent_num = int(indent_str[0])
+        indent_type = indent_str[1]
+        
+        if indent_type == "s":
+            indent_single = " "
+        else:
+            indent_single = "	"
+        
+        indent = indent_single * indent_num
+        self._indent = indent
+        
         select_methods_prefix = config.get("default", "select_methods_prefix")
     
         if not select_methods_prefix:
@@ -345,4 +365,8 @@ class Config:
     @property
     def firm(self):
         return self._firm
+
+    @property
+    def indent(self):
+        return self._indent
 

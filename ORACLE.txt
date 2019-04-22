@@ -14,6 +14,7 @@
 2b. if you have an rpm system, simply install the rpms downloaded
 
 3. pip3 install cx_Oracle
+
 4. open oracle_env.sh included in the EWA sources, change the oracle 
    client version and copy it where you want
 

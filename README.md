@@ -2,6 +2,8 @@
 
 Generator of Java code for Spring Boot + [sql2o](https://www.sql2o.org/) projects.
 
+[GitHub page](https://github.com/MarcoSulla/ewa)
+
 It auto generates, from a database table:
 - Model
 - Repository

@@ -40,7 +40,6 @@ def mergeDicts(*dicts):
     if not len_dicts > 1: 
         err_tpl = "You must provide at least 2 arguments ({num} given)"
         raise TypeError(err_tpl.format(num=len_dicts))
-        
     
     for i, d in enumerate(dicts):
         if i == 0: 
@@ -124,7 +123,6 @@ def overwrite(paths, dest_dir):
         mkdirP(dest_dir)
         rmFile(dest_path)
         shutil.move(path, dest_dir)
-    
     
     if isinstance(paths, Iterable):
         for path in paths:
@@ -332,8 +330,6 @@ def tail(filepath):
             if start_pos == 0:
                 f.seek(start_pos)
             else:
-                char = ""
-                
                 for pos in range(start_pos, -1, -1):
                     f.seek(pos)
                     

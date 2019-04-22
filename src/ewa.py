@@ -24,16 +24,17 @@ cmd_args = cmd_parser.parse_args()
 
 config = Config(cmd_args, app_dir)
 
-model.write(config)
-repository.write(config)
-repository_interface.write(config)
-service.write(config)
-service_interface.write(config)
-aggregator.write(config)
-sql2outility.write(config)
-
-print("\nFiles saved in " + str(config.data_dir))
-print(
+def main():
+    model.write(config)
+    repository.write(config)
+    repository_interface.write(config)
+    service.write(config)
+    service_interface.write(config)
+    aggregator.write(config)
+    sql2outility.write(config)
+    
+    print("\nFiles saved in " + str(config.data_dir))
+    print(
 """
 !!!IMPORTANT!!! 
 * Please check the insert and update methods in repo, in particular for """ + 
@@ -42,4 +43,8 @@ print(
 * If you want, you can also add a toString() to models and enrich the logging of """ + 
 """getByModel, deleteByModel and insert
 """
-)
+    )
+
+
+if __name__ == "__main__":
+    main()

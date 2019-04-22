@@ -12,7 +12,7 @@ class Config:
         self._indent = indent
     
         cmd_dict = vars(cmd_args)
-    
+        
         if cmd_dict.get("version"):
             print(VERSION)
             sys.exit(0)

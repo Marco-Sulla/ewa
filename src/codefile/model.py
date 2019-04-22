@@ -3,7 +3,9 @@ import utility.util as util
 
 def write(config):
     model_start = (
-"""package {pack_model};
+"""{firm}
+
+package {pack_model};
 
 {imports}
 
@@ -60,7 +62,12 @@ public class {class_name} {{"""
     
     imports += config.import_date_eff
     
-    model += model_start.format(imports=imports, class_name=config.class_name, pack_model=config.pack_model) + "\n"
-    model += fields + "\n\n" + methods.rstrip() + "\n" + model_end
+    model += model_start.format(
+        imports = imports, 
+        class_name = config.class_name, 
+        pack_model = config.pack_model,
+        firm = config.firm,
+    )
+    model += "\n" + fields + "\n\n" + methods.rstrip() + "\n" + model_end
 
     util.writeToFile(config.data_dir, config.pack_model, config.class_name + ".java", model)

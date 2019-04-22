@@ -3,7 +3,9 @@ import utility.util as util
 
 def write(config):
     service_tpl = (
-"""package {pack_service};
+"""{firm}
+
+package {pack_service};
 
 import java.util.ArrayList;
 import java.util.List;
@@ -207,6 +209,7 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
         aggregator_class = config.aggregator_class,
         aggregator_var = config.aggregator_var,
         pack_aggregator = config.pack_aggregator,
+        firm = config.firm,
     )
     
     util.writeToFile(config.data_dir, config.pack_service, config.class_name + "ServiceImpl.java", service)

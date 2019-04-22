@@ -3,7 +3,9 @@ import utility.util as util
 
 def write(config):
     repo_tpl = (
-"""package {pack_repo};
+"""{firm}
+
+package {pack_repo};
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -541,6 +543,7 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
         save=save,
         idkey=idkey,
         select_methods_prefix=config.select_methods_prefix,
+        firm=config.firm,
     )
     
     util.writeToFile(config.data_dir, config.pack_repo, config.class_name + "RepositoryImpl.java", repo)

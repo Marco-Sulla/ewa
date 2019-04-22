@@ -3,7 +3,9 @@ import utility.util as util
 
 def write(config):
     repoint_tpl = (
-"""package {pack_repo};
+"""{firm}
+
+package {pack_repo};
 
 import java.util.List;
 
@@ -78,6 +80,7 @@ public interface {class_name}Repository {{
         pack_model = config.pack_model,
         update = update,
         select_methods_prefix = config.select_methods_prefix,
+        firm = config.firm,
     )
     
     util.writeToFile(config.data_dir, config.pack_repo, config.class_name + "Repository.java", repoint)

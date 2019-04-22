@@ -3,7 +3,9 @@ import utility.util as util
 
 def write(config):
     sql2outility_tpl = (
-"""package {pack_utility};
+"""{firm}
+
+package {pack_utility};
 
 import org.springframework.stereotype.Component;
 import org.sql2o.Connection;
@@ -27,6 +29,10 @@ public class Sql2oUtility {{
 """
     )
     
-    sql2outility = sql2outility_tpl.format(pack_utility=config.pack_utility, indent=config.indent)
+    sql2outility = sql2outility_tpl.format(
+        pack_utility = config.pack_utility, 
+        indent = config.indent,
+        firm = config.firm,
+    )
     
     util.writeToFile(config.data_dir, config.pack_utility, "Sql2oUtility.java", sql2outility)

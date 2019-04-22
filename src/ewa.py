@@ -32,17 +32,13 @@ service_interface.write(config)
 aggregator.write(config)
 sql2outility.write(config)
 
-print("Files saved in " + str(config.data_dir))
+print("\nFiles saved in " + str(config.data_dir))
 print(
 """
-
 !!!IMPORTANT!!! 
-
 * Please check the insert and update methods in repo, in particular for """ + 
 """autoincrement columns as parameter that does not accept value in insert.
-
 * Remove also in update fields that should never be updated, like createdby or createdon.
-
 * If you want, you can also add a toString() to models and enrich the logging of """ + 
 """getByModel, deleteByModel and insert
 """

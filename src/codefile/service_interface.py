@@ -3,7 +3,9 @@ import utility.util as util
 
 def write(config):
     serviceint_tpl = (
-"""package {pack_service};
+"""{firm}
+
+package {pack_service};
 
 import java.util.List;
 
@@ -81,6 +83,7 @@ public interface {class_name}Service {{
         select_methods_prefix = config.select_methods_prefix,
         aggregator_class = config.aggregator_class,
         pack_aggregator = config.pack_aggregator,
+        firm = config.firm,
     )
     
     util.writeToFile(config.data_dir, config.pack_service, config.class_name + "Service.java", serviceint)

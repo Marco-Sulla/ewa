@@ -3,7 +3,9 @@ import utility.util as util
 
 def write(config):
     aggregator_tpl = (
-"""package {pack_aggregator};
+"""{firm}
+
+package {pack_aggregator};
 
 import {pack_model}.{class_name};
 
@@ -27,6 +29,7 @@ public class {class_name}Aggregator {{
         class_name = config.class_name,
         varname = config.varname,
         indent = config.indent,
+        firm = config.firm, 
     )
     
     util.writeToFile(config.data_dir, config.pack_aggregator, config.class_name + "Aggregator.java", aggregator)

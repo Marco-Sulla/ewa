@@ -21,3 +21,4 @@ class IDbUtility(ABC):
     @abstractmethod
     def get_columns_data_sql(cls):
         pass
+

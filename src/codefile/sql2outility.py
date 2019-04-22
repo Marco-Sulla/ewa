@@ -36,3 +36,4 @@ public class Sql2oUtility {{
     )
     
     util.writeToFile(config.data_dir, config.pack_utility, "Sql2oUtility.java", sql2outility)
+

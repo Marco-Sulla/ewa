@@ -10,3 +10,4 @@ version_flag = "--version"
 cmd_parser = argparse.ArgumentParser(description=app_descr)
 cmd_parser.add_argument("--config", required=version_flag not in sys.argv, help=help_config)
 cmd_parser.add_argument(version_flag, action="store_true", help=help_version)
+

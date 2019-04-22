@@ -24,6 +24,7 @@ cmd_args = cmd_parser.parse_args()
 
 config = Config(cmd_args, app_dir)
 
+
 def main():
     model.write(config)
     repository.write(config)
@@ -48,3 +49,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

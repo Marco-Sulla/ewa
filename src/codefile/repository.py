@@ -547,3 +547,4 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
     )
     
     util.writeToFile(config.data_dir, config.pack_repo, config.class_name + "RepositoryImpl.java", repo)
+

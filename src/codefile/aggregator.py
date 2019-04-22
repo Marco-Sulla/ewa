@@ -33,3 +33,4 @@ public class {class_name}Aggregator {{
     )
     
     util.writeToFile(config.data_dir, config.pack_aggregator, config.class_name + "Aggregator.java", aggregator)
+

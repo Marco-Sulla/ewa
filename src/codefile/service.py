@@ -213,3 +213,4 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
     )
     
     util.writeToFile(config.data_dir, config.pack_service, config.class_name + "ServiceImpl.java", service)
+

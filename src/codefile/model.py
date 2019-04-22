@@ -71,3 +71,4 @@ public class {class_name} {{"""
     model += "\n" + fields + "\n\n" + methods.rstrip() + "\n" + model_end
 
     util.writeToFile(config.data_dir, config.pack_model, config.class_name + ".java", model)
+

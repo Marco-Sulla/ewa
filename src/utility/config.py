@@ -345,3 +345,4 @@ class Config:
     @property
     def firm(self):
         return self._firm
+

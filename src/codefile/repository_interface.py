@@ -84,3 +84,4 @@ public interface {class_name}Repository {{
     )
     
     util.writeToFile(config.data_dir, config.pack_repo, config.class_name + "Repository.java", repoint)
+

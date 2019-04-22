@@ -87,3 +87,4 @@ public interface {class_name}Service {{
     )
     
     util.writeToFile(config.data_dir, config.pack_service, config.class_name + "Service.java", serviceint)
+

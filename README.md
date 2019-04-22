@@ -36,3 +36,4 @@ I'm using `sqlalchemy`, so in teory I can support any database that [it supports
 
 # License
 See [LICENSE](https://github.com/MarcoSulla/ewa/blob/master/LICENSE)
+

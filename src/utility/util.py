@@ -8,3 +8,4 @@ def writeToFile(base_dir, pack, filename, content):
 
     with open(str(path), mode="w+") as f:
         f.write(content)
+

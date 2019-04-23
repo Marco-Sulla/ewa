@@ -9,10 +9,12 @@ Requires Python 3.4+, Spring Boot 1+, JDK 8+, sql2o 1.4+
 3) go to the extracted folder
 4) > cd ewa-master
 3) > sudo apt install python3-pip
-4) if you want, you can create a virtualenv
-5) > pip3 install -r requirements.txt
-6) For Oracle, see ORACLE.txt
-7) See README.txt for using it.
+4) > pip3 install --upgrade setuptools
+5) > sudo apt install freetds-dev
+6) if you want, you can create a virtualenv
+7) > pip3 install -r requirements.txt
+8) For Oracle, see ORACLE.txt
+9) See README.txt for using it.
 
 Bye!
 

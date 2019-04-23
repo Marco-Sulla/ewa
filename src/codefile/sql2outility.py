@@ -1,7 +1,7 @@
 import utility.util as util
 
 sql2outility_tpl = (
-"""{firm_sql2outility}
+"""{firm_donottouch}
 
 package {pack_utility};
 
@@ -31,7 +31,7 @@ def write(config):
     sql2outility = sql2outility_tpl.format(
         pack_utility = config.pack_utility, 
         indent = config.indent,
-        firm_sql2outility = config.firm_sql2outility,
+        firm_donottouch = config.firm_donottouch,
     )
     
     util.writeToFile(config.data_dir, config.pack_utility, "Sql2oUtility.java", sql2outility)

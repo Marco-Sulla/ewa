@@ -5,23 +5,21 @@ sql2outility_tpl = (
 
 package {pack_utility};
 
-import org.springframework.stereotype.Component;
 import org.sql2o.Connection;
 import org.sql2o.Query;
 
-@Component
 public class Sql2oUtility {{
-{indent}public static Object getInsertedId(
+{indent}public static <T extends Object> T getInsertedId(
 {indent}{indent}String table, 
 {indent}{indent}String idfield, 
 {indent}{indent}Connection con, 
-{indent}{indent}Object key
+{indent}{indent}Object key,
+{indent}{indent}Class<T> type
 {indent}) {{
 {indent}{indent}try (Query queryid = con.createQuery("SELECT " + idfield + " FROM " + table + " WHERE rowid  = :key")) {{
 {indent}{indent}{indent}queryid.addParameter("key", key);
-{indent}{indent}{indent}Object obj = queryid.executeAndFetchFirst(Object.class);
-{indent}{indent}{indent}return obj;
-{indent}{indent}}}  
+{indent}{indent}{indent}return type.cast(queryid.executeAndFetchFirst(type));
+{indent}{indent}}}   
 {indent}}}
 }}
 """

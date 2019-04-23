@@ -22,6 +22,7 @@ public class Sql2oUtility {{
 {indent}{indent}}}   
 {indent}}}
 }}
+
 """
 )
 

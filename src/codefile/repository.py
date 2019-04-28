@@ -22,7 +22,7 @@ import {pack_utility}.Sql2oUtility;
 
 @Repository
 public class {class_name}RepositoryImpl implements {class_name}Repository {{
-{indent}private final static Logger logger = LoggerFactory.getLogger("{class_name}Repository");
+{indent}private final static Logger logger = LoggerFactory.getLogger({class_name}Repository.class);
 {indent}
 {indent}@Autowired
 {indent}private Sql2o sql2o;

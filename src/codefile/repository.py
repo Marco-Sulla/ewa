@@ -390,62 +390,55 @@ def write(config):
         
         idkey += idkey_end
     
-    idslog_tpl = ""
-    idslog_update_tpl = ""
-    idswhere_tpl = idswhere_init_tpl
-    idsinit_tpl = ""
-    idsparams_tpl = ""
+    idslog = ""
+    idslog_update = ""
+    idswhere = idswhere_init_tpl.format(indent=config.indent)
+    idsinit = ""
+    idsparams = ""
     
     for id in config.ids:
         col_type = config.col_types[id]
         varid = id.lower()
         methid = id[0] + id[1:].lower()
 
-        idslog_tpl += idslog_col_tpl
-        idslog_update_tpl += idslog_update_col_tpl
-        idswhere_tpl += idswhere_col_tpl
-        idsinit_tpl += idsinit_col_tpl
-        idsparams_tpl += idsparams_col_tpl
+        idslog += idslog_col_tpl.format(varid=varid)
+        
+        idslog_update += idslog_update_col_tpl.format(
+            varid=varid,
+            varname=config.varname,
+            methid=methid,
+        )
+        
+        idswhere += idswhere_col_tpl.format(
+            indent=config.indent,
+            id=id,
+            varid=varid
+        )
+        
+        idsinit += idsinit_col_tpl.format(
+            indent=config.indent,
+            col_type=col_type,
+            varid=varid,
+            varname=config.varname,
+            methid=methid,
+            select_methods_prefix=config.select_methods_prefix,
+        )
+        
+        idsparams += idsparams_col_tpl.format(
+            indent=config.indent,
+            varid=id.lower(),
+        )
 
-    idslog = idslog_tpl.format(varid=varid)
     idslog = idslog[:-4]
-
-    idslog_update = idslog_update_tpl.format(
-        varid=varid,
-        varname=config.varname,
-        methid=methid,
-    )
-
     idslog_update = idslog_update[:-4]
-
-    idswhere = idswhere_tpl.format(
-        indent=config.indent,
-        id=id,
-        varid=varid
-    )
-    
     idswhere = idswhere[:-8] + '";'
     
     select_fields = select_fields_tpl.format(indent=config.indent)
-
-    idsinit = idsinit_tpl.format(
-        indent=config.indent,
-        col_type=col_type,
-        varid=varid,
-        varname=config.varname,
-        methid=methid,
-        select_methods_prefix=config.select_methods_prefix,
-    )
-
-    idsparams = idsparams_tpl.format(
-        indent=config.indent,
-        varid=id.lower(),
-    )
     
-    update_params_tpl = ""
-    bymodel_params_tpl = ""
-    update_fields_tpl = ""
-    bymodel_where_tpl = ""
+    update_params = ""
+    bymodel_params = ""
+    update_fields = ""
+    bymodel_where = ""
     select_field_body = ""
     insert_fields = ""
     insert_vars = ""
@@ -467,47 +460,42 @@ def write(config):
 
         insert_fields += insert_fields_col_tpl.format(col=col, indent=config.indent)
         insert_vars += insert_vars_col_tpl.format(col=col.lower(), indent=config.indent)
-        update_params_tpl += update_params_col_tpl
-        bymodel_params_tpl += bymodel_params_col_tpl
-        bymodel_where_tpl += bymodel_where_col_tpl
+        
+        update_params += update_params_col_tpl.format(
+            colname=colname,
+            varname=config.varname,
+            methcol=methcol,
+            indent=config.indent,
+            select_methods_prefix=config.select_methods_prefix,
+        )
+        
+        bymodel_params += bymodel_params_col_tpl.format(
+            colname=colname,
+            varname=config.varname,
+            methcol=methcol,
+            indent=config.indent,
+            select_methods_prefix=config.select_methods_prefix,
+        )
+        
+        bymodel_where += bymodel_where_col_tpl.format(
+            col=col,
+            colname=colname,
+            indent=config.indent,
+            varname=config.varname,
+            methcol=methcol,
+            select_methods_prefix=config.select_methods_prefix,
+        )
         
         if col not in config.ids:
-            update_fields_tpl += update_fields_col_tpl
+            update_fields += update_fields_col_tpl.format(
+                col=col,
+                colname=colname,
+                indent=config.indent,
+                varname=config.varname,
+                methcol=methcol,
+                select_methods_prefix=config.select_methods_prefix,
+            )
     
-    update_params = update_params_tpl.format(
-        colname=colname,
-        varname=config.varname,
-        methcol=methcol,
-        indent=config.indent,
-        select_methods_prefix=config.select_methods_prefix,
-    )
-    
-    bymodel_params = bymodel_params_tpl.format(
-        colname=colname,
-        varname=config.varname,
-        methcol=methcol,
-        indent=config.indent,
-        select_methods_prefix=config.select_methods_prefix,
-    )
-
-    bymodel_where = bymodel_where_tpl.format(
-        col=col,
-        colname=colname,
-        indent=config.indent,
-        varname=config.varname,
-        methcol=methcol,
-        select_methods_prefix=config.select_methods_prefix,
-    )
-
-    update_fields = update_fields_tpl.format(
-        col=col,
-        colname=colname,
-        indent=config.indent,
-        varname=config.varname,
-        methcol=methcol,
-        select_methods_prefix=config.select_methods_prefix,
-    )
-
     select_fields += select_field_body
     select_fields_end = select_fields_end_tpl.format(indent=config.indent)
     select_fields += select_fields_end

@@ -6,6 +6,7 @@ It auto generates, from a database table:
 - Model
 - Repository
 - Service
+- Aggregate
 
 # Features
 - Support for tables with primary key with multiple fields
@@ -25,8 +26,10 @@ It auto generates, from a database table:
 - `Service` methods returns a Aggregate object, with the model as one of the 
   attributes
 - `Service` has an `enrich()` stub method, for augmenting the `Aggregate` and 
-  `List<Aggregate>` objects returned by `Service` method. All `Service` method 
+  `List<Aggregate>` objects returned by `Service` methods. All `Service` methods 
   created by EWA calls `enrich()` by default.
+- SELECT methods prefix is configurable. You can use "find", "get", "givePapa" 
+  or whatever you want
 - Configurable indentation style
 
 # Install

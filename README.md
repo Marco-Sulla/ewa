@@ -8,6 +8,7 @@ It auto generates, from a database table:
 - Model
 - Repository
 - Service
+- [Aggregate](https://en.wikipedia.org/wiki/Domain-driven_design#Building_blocks)
 
 # Features
 - `find` methods have an optional `fields_to_ignore` parameter, to filter fields in SELECTs
@@ -19,7 +20,8 @@ It auto generates, from a database table:
 - Support for tables with primary key with multiple fields
 - Basic SELECT sql, centralized for all `find` methods. Update it and all `find` methods will be updated
 - `Service` methods returns a [`Aggregate`](https://en.wikipedia.org/wiki/Domain-driven_design#Building_blocks) object, with the model as one of the attributes
-- `Service` has an `enrich()` stub method, for augmenting the `Aggregate` and `List<Aggregate>` objects returned by `Service` method. All `Service` method created by EWA calls `enrich()` by default.
+- `Service` has an `enrich()` stub method, for augmenting the `Aggregate` and `List<Aggregate>` objects returned by `Service` methodss. All `Service` methods created by EWA calls `enrich()` by default.
+- SELECT methods prefix is configurable. You can use "find", "get", "givePapa" or whatever you want
 - Configurable indentation style
 
 # Install

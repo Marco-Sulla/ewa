@@ -27,16 +27,16 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}@Autowired
 {indent}private Sql2o sql2o;
 {indent}
-{indent}private String getSelectBase(List<String> fields_to_ignore) {{
+{indent}private static String getSelectBase(List<String> fields_to_ignore) {{
 {select_fields}
 {indent}{indent}return res;
-{indent}}};
+{indent}}}
 {indent}
 {indent}@Override
 {indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Connection con) {{
 {indent}{indent}logger.debug("DB>> {select_methods_prefix}By{methid}() - {idslog});
 {indent}{indent}
-{indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
+{indent}{indent}String sql = "select " + {class_name}RepositoryImpl.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {idswhere}
 {indent}{indent}
 {indent}{indent}{class_name} res;
@@ -71,7 +71,7 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}public List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Connection con) {{
 {indent}{indent}logger.debug("DB>> {select_methods_prefix}All()");
 {indent}{indent}
-{indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
+{indent}{indent}String sql = "select " + {class_name}RepositoryImpl.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {indent}{indent}
 {indent}{indent}List<{class_name}> res;
 {indent}{indent}
@@ -104,7 +104,7 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore, Connection con) {{
 {indent}{indent}logger.debug("DB>> {select_methods_prefix}ByModel()");
 {indent}{indent}
-{indent}{indent}String sql = "select " + this.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
+{indent}{indent}String sql = "select " + {class_name}RepositoryImpl.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {indent}{indent}sql += "where ";
 {indent}{indent}
 {bymodel_where}
@@ -181,9 +181,7 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}{indent}if ({varname}2 == null) {{
 {indent}{indent}{indent}return this.insert({varname}, con);
 {indent}{indent}}}
-{indent}{indent}else {{
 {save}
-{indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
@@ -247,7 +245,7 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 """
 )
 
-save_update_tpl = """{indent}{indent}{indent}return this.update({varname}, false, con);"""
+save_update_tpl = """{indent}{indent}return this.update({varname}, false, con);"""
 
 idkey_end_tpl = (
 """
@@ -298,7 +296,7 @@ update_tpl = (
 
 idkey_mssql_tpl = "{indent}{indent}Object res = key;"
 
-idkey_oracle_tpl = """{indent}{indent}Object res = Sql2oUtility.getInsertedId("{table_name}", "{id0}", con, key);"""
+idkey_oracle_tpl = """{indent}{indent}Object res = Sql2oUtility.getInsertedId("{table_name}", "{id0}", con, key, {id_col_type}.class);"""
 
 select_fields_tpl = (
 """{indent}{indent}String res = "";
@@ -356,7 +354,7 @@ select_fields_end_tpl = (
 {indent}{indent}"""
 )
 
-save_update_null_tpl = "{indent}{indent}{indent}return null;"
+save_update_null_tpl = "{indent}{indent}return null;"
 idslog_col_tpl = '{varid}: " + {varid} + "'
 idslog_update_col_tpl = '{varid}: " + {varname}.get{methid}() + "'
 idswhere_col_tpl = '{indent}{indent}sql += "{id} = :{varid} and "; \n'
@@ -378,7 +376,8 @@ def write(config):
             idkey = idkey_oracle_tpl.format(
                 indent=config.indent,
                 id0=config.ids[0],
-                table_name=config.table_name
+                table_name=config.table_name,
+                id_col_type=config.id_col_type,
             )
         
         idkey_end = idkey_end_tpl.format(
@@ -556,4 +555,3 @@ def write(config):
     )
     
     util.writeToFile(config.data_dir, config.pack_repo, config.class_name + "RepositoryImpl.java", repo)
-

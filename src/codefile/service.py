@@ -22,7 +22,7 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}@Autowired
 {indent}private {class_name}Repository {varname}Repository;
 {indent}
-{indent}private static {aggregator_class} enrich(final {class_name} {varname}) {{
+{indent}private {aggregator_class} enrich(final {class_name} {varname}) {{
 {indent}{indent}{aggregator_class} {aggregator_var} = null;
 {indent}{indent}
 {indent}{indent}if ({varname} != null) {{
@@ -34,12 +34,12 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}{indent}return {aggregator_var};
 {indent}}}
 {indent}
-{indent}private static List<{aggregator_class}> enrich(final List<{class_name}> {varname}s) {{
+{indent}private List<{aggregator_class}> enrich(final List<{class_name}> {varname}s) {{
 {indent}{indent}final List<{aggregator_class}> {aggregator_var}s = new ArrayList<>();
 {indent}{indent}
 {indent}{indent}if ({varname}s != null) {{
 {indent}{indent}{indent}for (final {class_name} {varname}: {varname}s) {{
-{indent}{indent}{indent}{indent}{aggregator_var}s.add({class_name}ServiceImpl.enrich({varname}));
+{indent}{indent}{indent}{indent}{aggregator_var}s.add(this.enrich({varname}));
 {indent}{indent}{indent}}}
 {indent}{indent}}}
 {indent}{indent}
@@ -50,84 +50,84 @@ public class {class_name}ServiceImpl implements {class_name}Service {{
 {indent}public List<{aggregator_class}> {select_methods_prefix}All(final List<String> fields_to_ignore, final Connection con) {{
 {indent}{indent}final List<{class_name}> {varname}s = this.{varname}Repository.{select_methods_prefix}All(fields_to_ignore, con);
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname}s);
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{aggregator_class}> {select_methods_prefix}All(final Connection con) {{
 {indent}{indent}final List<{class_name}> {varname}s = this.{varname}Repository.{select_methods_prefix}All(con);
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname}s);
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{aggregator_class}> {select_methods_prefix}All(final List<String> fields_to_ignore) {{
 {indent}{indent}final List<{class_name}> {varname}s = this.{varname}Repository.{select_methods_prefix}All(fields_to_ignore);
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname}s);
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{aggregator_class}> {select_methods_prefix}All() {{
 {indent}{indent}final List<{class_name}> {varname}s = this.{varname}Repository.{select_methods_prefix}All();
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname}s);
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{aggregator_class}> {select_methods_prefix}ByModel(final {class_name} {varname}, final List<String> fields_to_ignore, final Connection con) {{
 {indent}{indent}final List<{class_name}> {varname}s = this.{varname}Repository.{select_methods_prefix}ByModel({varname}, fields_to_ignore, con);
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname}s);
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{aggregator_class}> {select_methods_prefix}ByModel(final {class_name} {varname}, final Connection con) {{
 {indent}{indent}final List<{class_name}> {varname}s = this.{varname}Repository.{select_methods_prefix}ByModel({varname}, con);
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname}s);
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{aggregator_class}> {select_methods_prefix}ByModel(final {class_name} {varname}, final List<String> fields_to_ignore) {{
 {indent}{indent}final List<{class_name}> {varname}s = this.{varname}Repository.{select_methods_prefix}ByModel({varname}, fields_to_ignore);
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname}s);
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{aggregator_class}> {select_methods_prefix}ByModel(final {class_name} {varname}) {{
 {indent}{indent}final List<{class_name}> {varname}s = this.{varname}Repository.{select_methods_prefix}ByModel({varname});
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname}s);
+{indent}{indent}return this.enrich({varname}s);
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public {aggregator_class} {select_methods_prefix}By{methid}({idsfirm}, final List<String> fields_to_ignore, final Connection con) {{
 {indent}{indent}final {class_name} {varname} = this.{varname}Repository.{select_methods_prefix}By{methid}({idslist}, fields_to_ignore, con);
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname});
+{indent}{indent}return this.enrich({varname});
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public {aggregator_class} {select_methods_prefix}By{methid}({idsfirm}, final Connection con) {{
 {indent}{indent}final {class_name} {varname} = this.{varname}Repository.{select_methods_prefix}By{methid}({idslist}, con);
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname});
+{indent}{indent}return this.enrich({varname});
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public {aggregator_class} {select_methods_prefix}By{methid}({idsfirm}, final List<String> fields_to_ignore) {{
 {indent}{indent}final {class_name} {varname} = this.{varname}Repository.{select_methods_prefix}By{methid}({idslist}, fields_to_ignore);
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname});
+{indent}{indent}return this.enrich({varname});
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public {aggregator_class} {select_methods_prefix}By{methid}({idsfirm}) {{
 {indent}{indent}final {class_name} {varname} = this.{varname}Repository.{select_methods_prefix}By{methid}({idslist});
 {indent}{indent}
-{indent}{indent}return {class_name}ServiceImpl.enrich({varname});
+{indent}{indent}return this.enrich({varname});
 {indent}}}
 {indent}
 {indent}@Override

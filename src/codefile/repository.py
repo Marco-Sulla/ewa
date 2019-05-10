@@ -20,6 +20,7 @@ import org.sql2o.Sql2o;
 import {pack_model}.{class_name};
 import {pack_utility}.Sql2oUtility;
 
+
 @Repository
 public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}private final static Logger logger = LoggerFactory.getLogger({class_name}Repository.class);
@@ -27,13 +28,13 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}@Autowired
 {indent}private Sql2o sql2o;
 {indent}
-{indent}private static String getSelectBase(List<String> fields_to_ignore) {{
+{indent}private static String getSelectBase(final List<String> fields_to_ignore) {{
 {select_fields}
 {indent}{indent}return res;
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Connection con) {{
+{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, final List<String> fields_to_ignore, final Connection con) {{
 {indent}{indent}logger.debug("DB>> {select_methods_prefix}By{methid}() - {idslog});
 {indent}{indent}
 {indent}{indent}String sql = "select " + {class_name}RepositoryImpl.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
@@ -51,13 +52,13 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, Connection con) {{
-{indent}{indent}return {select_methods_prefix}By{methid}({idslist}, null, con);
+{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, final Connection con) {{
+{indent}{indent}return this.{select_methods_prefix}By{methid}({idslist}, null, con);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore) {{
-{indent}{indent}try (Connection con = sql2o.open()) {{
+{indent}public {class_name} {select_methods_prefix}By{methid}({idsfirm}, final List<String> fields_to_ignore) {{
+{indent}{indent}try (Connection con = this.sql2o.open()) {{
 {indent}{indent}{indent}return this.{select_methods_prefix}By{methid}({idslist}, fields_to_ignore, con);
 {indent}{indent}}}
 {indent}}}
@@ -68,10 +69,10 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore, Connection con) {{
+{indent}public List<{class_name}> {select_methods_prefix}All(final List<String> fields_to_ignore, final Connection con) {{
 {indent}{indent}logger.debug("DB>> {select_methods_prefix}All()");
 {indent}{indent}
-{indent}{indent}String sql = "select " + {class_name}RepositoryImpl.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
+{indent}{indent}final String sql = "select " + {class_name}RepositoryImpl.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
 {indent}{indent}
 {indent}{indent}List<{class_name}> res;
 {indent}{indent}
@@ -84,24 +85,24 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}All(Connection con) {{
-{indent}{indent}return {select_methods_prefix}All(null, con);
+{indent}public List<{class_name}> {select_methods_prefix}All(final Connection con) {{
+{indent}{indent}return this.{select_methods_prefix}All(null, con);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}All(List<String> fields_to_ignore) {{
-{indent}{indent}try (Connection con = sql2o.open()) {{
+{indent}public List<{class_name}> {select_methods_prefix}All(final List<String> fields_to_ignore) {{
+{indent}{indent}try (Connection con = this.sql2o.open()) {{
 {indent}{indent}{indent}return this.{select_methods_prefix}All(fields_to_ignore, con);
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
 {indent}public List<{class_name}> {select_methods_prefix}All() {{
-{indent}{indent}return {select_methods_prefix}All((List<String>) null);
+{indent}{indent}return this.{select_methods_prefix}All((List<String>) null);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore, Connection con) {{
+{indent}public List<{class_name}> {select_methods_prefix}ByModel(final {class_name} {varname}, final List<String> fields_to_ignore, final Connection con) {{
 {indent}{indent}logger.debug("DB>> {select_methods_prefix}ByModel()");
 {indent}{indent}
 {indent}{indent}String sql = "select " + {class_name}RepositoryImpl.getSelectBase(fields_to_ignore) + "from {table_name} {initial} ";
@@ -122,27 +123,27 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, Connection con) {{
-{indent}{indent}return {select_methods_prefix}ByModel({varname}, null, con);
+{indent}public List<{class_name}> {select_methods_prefix}ByModel(final {class_name} {varname}, final Connection con) {{
+{indent}{indent}return this.{select_methods_prefix}ByModel({varname}, null, con);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}, List<String> fields_to_ignore) {{
-{indent}{indent}try (Connection con = sql2o.open()) {{
+{indent}public List<{class_name}> {select_methods_prefix}ByModel(final {class_name} {varname}, final List<String> fields_to_ignore) {{
+{indent}{indent}try (Connection con = this.sql2o.open()) {{
 {indent}{indent}{indent}return this.{select_methods_prefix}ByModel({varname}, fields_to_ignore, con);
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public List<{class_name}> {select_methods_prefix}ByModel({class_name} {varname}) {{
-{indent}{indent}return {select_methods_prefix}ByModel({varname}, (List<String>) null);
+{indent}public List<{class_name}> {select_methods_prefix}ByModel(final {class_name} {varname}) {{
+{indent}{indent}return this.{select_methods_prefix}ByModel({varname}, (List<String>) null);
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} insert({class_name} {varname}, Connection con) {{
+{indent}public {class_name} insert(final {class_name} {varname}, final Connection con) {{
 {indent}{indent}logger.info("DB>> insert()");
 {indent}{indent}
-{indent}{indent}String sql = (
+{indent}{indent}final String sql = (
 {indent}{indent}{indent}"insert into {table_name} ( " + 
 {insert_fields}
 {indent}{indent}{indent}") " + 
@@ -164,19 +165,19 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} insert({class_name} {varname}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}{varname} = this.insert({varname}, con);
+{indent}public {class_name} insert(final {class_name} {varname}) {{
+{indent}{indent}try (Connection con = this.sql2o.beginTransaction()) {{
+{indent}{indent}{indent}final {class_name} {varname}2 = this.insert({varname}, con);
 {indent}{indent}{indent}con.commit();
-{indent}{indent}{indent}return {varname};
+{indent}{indent}{indent}return {varname}2;
 {indent}{indent}}}
 {indent}}}
 {indent}
 {update}
 {indent}@Override
-{indent}public {class_name} save({class_name} {varname}, Connection con) {{
+{indent}public {class_name} save(final {class_name} {varname}, final Connection con) {{
 {idsinit}
-{indent}{indent}{class_name} {varname}2 = this.{select_methods_prefix}By{methid}({idslist}, null, con);
+{indent}{indent}final {class_name} {varname}2 = this.{select_methods_prefix}By{methid}({idslist}, null, con);
 {indent}{indent}
 {indent}{indent}if ({varname}2 == null) {{
 {indent}{indent}{indent}return this.insert({varname}, con);
@@ -185,16 +186,16 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} save({class_name} {varname}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}{class_name} res = this.save({varname}, con);
+{indent}public {class_name} save(final {class_name} {varname}) {{
+{indent}{indent}try (Connection con = this.sql2o.beginTransaction()) {{
+{indent}{indent}{indent}final {class_name} res = this.save({varname}, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}{indent}return res;
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void delete({idsfirm}, Connection con) {{
+{indent}public void delete({idsfirm}, final Connection con) {{
 {indent}{indent}logger.info("DB>> delete() - {idslog});
 {indent}{indent}
 {indent}{indent}String sql = "delete from {table_name} ";
@@ -210,14 +211,14 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}
 {indent}@Override
 {indent}public void delete({idsfirm}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
+{indent}{indent}try (Connection con = this.sql2o.beginTransaction()) {{
 {indent}{indent}{indent}this.delete({idslist}, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}}}
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void deleteByModel({class_name} {varname}, Connection con) {{
+{indent}public void deleteByModel(final {class_name} {varname}, final Connection con) {{
 {indent}{indent}logger.info("DB>> deleteByModel()");
 {indent}{indent}
 {indent}{indent}String sql = "delete from {table_name} ";
@@ -235,8 +236,8 @@ public class {class_name}RepositoryImpl implements {class_name}Repository {{
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public void deleteByModel({class_name} {varname}) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
+{indent}public void deleteByModel(final {class_name} {varname}) {{
+{indent}{indent}try (Connection con = this.sql2o.beginTransaction()) {{
 {indent}{indent}{indent}this.deleteByModel({varname}, con);
 {indent}{indent}{indent}con.commit();
 {indent}{indent}}}
@@ -251,7 +252,7 @@ idkey_end_tpl = (
 """
 {indent}{indent}
 {indent}{indent}Object res_true;
-{indent}{indent}Class<?> klass = {id_col_type}.class;
+{indent}{indent}final Class<?> klass = {id_col_type}.class;
 {indent}{indent}
 {indent}{indent}if (res != null && (klass == Long.class || klass == BigDecimal.class)) {{
 {indent}{indent}{indent}res_true = ((BigDecimal) res).longValue();
@@ -265,7 +266,7 @@ idkey_end_tpl = (
 
 update_tpl = (
 """{indent}@Override
-{indent}public {class_name} update({class_name} {varname}, boolean exclude_nulls, Connection con) {{
+{indent}public {class_name} update(final {class_name} {varname}, final boolean exclude_nulls, final Connection con) {{
 {indent}{indent}logger.info("DB>> update() - {idslog_update});
 {indent}{indent}
 {indent}{indent}String sql = "update {table_name} set ";
@@ -284,11 +285,11 @@ update_tpl = (
 {indent}}}
 {indent}
 {indent}@Override
-{indent}public {class_name} update({class_name} {varname}, boolean exclude_nulls) {{
-{indent}{indent}try (Connection con = sql2o.beginTransaction()) {{
-{indent}{indent}{indent}{varname} = this.update({varname}, exclude_nulls, con);
+{indent}public {class_name} update(final {class_name} {varname}, final boolean exclude_nulls) {{
+{indent}{indent}try (Connection con = this.sql2o.beginTransaction()) {{
+{indent}{indent}{indent}final {class_name} {varname}2 = this.update({varname}, exclude_nulls, con);
 {indent}{indent}{indent}con.commit();
-{indent}{indent}{indent}return {varname};
+{indent}{indent}{indent}return {varname}2;
 {indent}{indent}}}
 {indent}}}
 {indent}"""
@@ -296,12 +297,12 @@ update_tpl = (
 
 idkey_mssql_tpl = "{indent}{indent}Object res = key;"
 
-idkey_oracle_tpl = """{indent}{indent}Object res = Sql2oUtility.getInsertedId("{table_name}", "{id0}", con, key, {id_col_type}.class);"""
+idkey_oracle_tpl = """{indent}{indent}final Object res = Sql2oUtility.getInsertedId("{table_name}", "{id0}", con, key, {id_col_type}.class);"""
 
 select_fields_tpl = (
 """{indent}{indent}String res = "";
 {indent}{indent}
-{indent}{indent}fields_to_ignore = fields_to_ignore
+{indent}{indent}final List<String> fields_to_ignore_true = fields_to_ignore
 {indent}{indent}{indent}.stream()
 {indent}{indent}{indent}.map(field -> field.toUpperCase())
 {indent}{indent}{indent}.collect(Collectors.toList());
@@ -310,7 +311,7 @@ select_fields_tpl = (
 )
 
 select_field_col_tpl = (
-"""{indent}{indent}if (fields_to_ignore != null && ! fields_to_ignore.contains("{col}")) {{
+"""{indent}{indent}if (fields_to_ignore_true != null && ! fields_to_ignore_true.contains("{col}")) {{
 {indent}{indent}{indent}res += "{initial}.{col}, ";
 {indent}{indent}}}
 {indent}{indent}
@@ -335,7 +336,7 @@ bymodel_params_col_tpl = (
 
 bymodel_where_col_tpl = (
 """{indent}{indent}if ({varname}.get{methcol}() != null) {{ 
-{indent}{indent}{indent} sql += "{col} = :{colname} and ";
+{indent}{indent}{indent}sql += "{col} = :{colname} and ";
 {indent}{indent}}}
 {indent}{indent}
 """
@@ -343,7 +344,7 @@ bymodel_where_col_tpl = (
 
 update_fields_col_tpl = (
 """{indent}{indent}if (! exclude_nulls || {varname}.get{methcol}() != null) {{ 
-{indent}{indent}{indent} sql += "{col} = :{colname}, ";
+{indent}{indent}{indent}sql += "{col} = :{colname}, ";
 {indent}{indent}}}
 {indent}{indent}
 """
@@ -358,7 +359,7 @@ save_update_null_tpl = "{indent}{indent}return null;"
 idslog_col_tpl = '{varid}: " + {varid} + "'
 idslog_update_col_tpl = '{varid}: " + {varname}.get{methid}() + "'
 idswhere_col_tpl = '{indent}{indent}sql += "{id} = :{varid} and "; \n'
-idsinit_col_tpl = '{indent}{indent}{col_type} {varid} = {varname}.get{methid}();\n'
+idsinit_col_tpl = '{indent}{indent}final {col_type} {varid} = {varname}.get{methid}();\n'
 idsparams_col_tpl = '{indent}{indent}{indent}query.addParameter("{varid}", {varid});\n'
 insert_params_tpl = '{indent}{indent}{indent}query.bind({varname});\n'
 insert_fields_col_tpl = '{indent}{indent}{indent}{indent}"{col}, " + \n'

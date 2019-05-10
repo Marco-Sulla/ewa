@@ -7,6 +7,7 @@ package {pack_aggregator};
 
 import {pack_model}.{class_name};
 
+
 public class {class_name}Aggregator {{
 {indent}private {class_name} {varname};
 {indent}
@@ -14,7 +15,7 @@ public class {class_name}Aggregator {{
 {indent}{indent}return this.{varname};
 {indent}}}
 {indent}
-{indent}public void set{class_name}({class_name} {varname}) {{
+{indent}public void set{class_name}(final {class_name} {varname}) {{
 {indent}{indent}this.{varname} = {varname};
 {indent}}}
 }}
@@ -33,4 +34,3 @@ def write(config):
     )
     
     util.writeToFile(config.data_dir, config.pack_aggregator, config.class_name + "Aggregator.java", aggregator)
-

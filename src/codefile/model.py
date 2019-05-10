@@ -10,7 +10,7 @@ package {pack_model};
 public class {class_name} {{"""
 )
 
-model_end = "}\n\n"
+model_end = "}\n"
 
 field_col_tpl = "{indent}private {type} {name};"
 
@@ -23,7 +23,7 @@ getter_col_tpl = (
 )
 
 setter_col_tpl = (
-"""{indent}public void set{methname}({type} {name}) {{
+"""{indent}public void set{methname}(final {type} {name}) {{
 {indent}{indent}this.{name} = {name};
 {indent}}}
 {indent}
@@ -80,4 +80,3 @@ def write(config):
     )
 
     util.writeToFile(config.data_dir, config.pack_model, config.class_name + ".java", model)
-

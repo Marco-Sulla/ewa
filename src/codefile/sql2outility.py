@@ -8,6 +8,7 @@ package {pack_utility};
 import org.sql2o.Connection;
 import org.sql2o.Query;
 
+
 public class Sql2oUtility {{
 {indent}public static <T extends Object> T getInsertedId(
 {indent}{indent}String table, 
@@ -35,4 +36,3 @@ def write(config):
     )
     
     util.writeToFile(config.data_dir, config.pack_utility, "Sql2oUtility.java", sql2outility)
-

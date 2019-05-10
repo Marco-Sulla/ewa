@@ -12,6 +12,7 @@ import org.sql2o.Connection;
 import {pack_aggregator}.{aggregator_class};
 import {pack_model}.{class_name};
 
+
 public interface {class_name}Service {{
 {indent}{aggregator_class} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Connection con);
 {indent}
@@ -87,4 +88,3 @@ def write(config):
     )
     
     util.writeToFile(config.data_dir, config.pack_service, config.class_name + "Service.java", serviceint)
-

@@ -211,7 +211,7 @@ class Config:
             col_type = col_types[id]
             varid = id.lower()
         
-            idsfirm += "{} {}, ".format(col_type, id.lower())
+            idsfirm += "final {} {}, ".format(col_type, id.lower())
             idslist += "{}, ".format(varid)
     
         idsfirm = idsfirm[:-2]
@@ -388,4 +388,3 @@ class Config:
     @property
     def site(self):
         return self._site
-

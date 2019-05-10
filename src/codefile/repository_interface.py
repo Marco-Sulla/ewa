@@ -11,6 +11,7 @@ import org.sql2o.Connection;
 
 import {pack_model}.{class_name};
 
+
 public interface {class_name}Repository {{
 {indent}{class_name} {select_methods_prefix}By{methid}({idsfirm}, List<String> fields_to_ignore, Connection con);
 {indent}
@@ -84,4 +85,3 @@ def write(config):
     )
     
     util.writeToFile(config.data_dir, config.pack_repo, config.class_name + "Repository.java", repoint)
-

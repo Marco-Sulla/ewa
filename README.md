@@ -25,20 +25,20 @@ It auto generates, from a database table:
 - Configurable indentation style
 
 # Install
-See [`INSTALL.TXT`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/INSTALL.txt) . You can download the program at [Releases](https://github.com/MarcoSulla/ewa/releases).
+See [`INSTALL.TXT`](https://raw.githubusercontent.com/Marco-Sulla/ewa/master/INSTALL.txt) . You can download the program at [Releases](https://github.com/Marco-Sulla/ewa/releases).
 
 # Use
 1. Go to `src` folder
-1. Create a `.ini` file. See [`config_example.ini`](https://raw.githubusercontent.com/MarcoSulla/ewa/master/src/config_example.ini)
+1. Create a `.ini` file. See [`config_example.ini`](https://raw.githubusercontent.com/Marco-Sulla/ewa/master/src/config_example.ini)
 2. `python3 ewa.py --config YOUR_CONFIG.ini`
 3. Read and follow the instructions at the end of script launching
 
 # Tested databases
-Oracle 12C+, MSSQL 2012+. Not all field types are currently supported. Please [open an issue](https://github.com/MarcoSulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+) if you want me to add one.
+Oracle 12C+, MSSQL 2012+. Not all field types are currently supported. Please [open an issue](https://github.com/Marco-Sulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+) if you want me to add one.
 
 # Untested, but potentially working databases
-I'm using `sqlalchemy`, so in teory I can support any database that [it supports](https://docs.sqlalchemy.org/en/13/dialects/). If you want to add a database, please [open an issue](https://github.com/MarcoSulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+).
+I'm using `sqlalchemy`, so in teory I can support any database that [it supports](https://docs.sqlalchemy.org/en/13/dialects/). If you want to add a database, please [open an issue](https://github.com/Marco-Sulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+).
 
 # License
-See [LICENSE](https://github.com/MarcoSulla/ewa/blob/master/LICENSE)
+See [LICENSE](https://github.com/Marco-Sulla/ewa/blob/master/LICENSE)
 

@@ -15,7 +15,7 @@ public class {class_name}Aggregator {{
 {indent}{indent}return this.{varname};
 {indent}}}
 {indent}
-{indent}public void set{class_name}(final {class_name} {varname}) {{
+{indent}public void set{class_name}({class_name} {varname}) {{
 {indent}{indent}this.{varname} = {varname};
 {indent}}}
 }}

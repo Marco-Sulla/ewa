@@ -23,7 +23,7 @@ getter_col_tpl = (
 )
 
 setter_col_tpl = (
-"""{indent}public void set{methname}(final {type} {name}) {{
+"""{indent}public void set{methname}({type} {name}) {{
 {indent}{indent}this.{name} = {name};
 {indent}}}
 {indent}

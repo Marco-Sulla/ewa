@@ -41,9 +41,11 @@ See INSTALL.TXT
 3. Go to `src` folder
 4. Copy config_example.ini` in another .ini file, and edit it following its 
    comments
-5. Launch in the shell: `> python3 ewa.py --config YOUR_CONFIG.ini`. If you 
+5. If you have Linux, you have to source `oracle_env.sh`. See ORACLE.txt for 
+   more details
+6. Launch in the shell: `> python3 ewa.py --config YOUR_CONFIG.ini`. If you 
    have Windows, use `python` instead of `python3`
-6. Read and follow the instructions at the end of script launching
+7. Read and follow the instructions at the end of script launching
 
 # Tested databases
 Oracle 12C+, MSSQL 2012+. Not all field types are currently supported. Please 

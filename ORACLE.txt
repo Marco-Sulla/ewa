@@ -25,6 +25,10 @@
    
    If you use another shell tab or you close and reopen the shell, you have to
    resource the oracle_env.sh file
+
+6. See README.txt for using it.
+
+7. Bye!
    
 ################################################################################
 #                                    WINDOWS                                   #
@@ -37,3 +41,8 @@
 2. extract the client folder where you want
 
 3. add to the PATH the client folder
+
+4. See README.txt for using it.
+
+5. Bye!
+

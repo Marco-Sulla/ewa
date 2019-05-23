@@ -34,7 +34,7 @@ Requires Python 3.4+, Spring Boot 1+, JDK 8+, sql2o 1.4+
 6) > python -m pip install --upgrade pip
 7) > python -m pip install --upgrade setuptools
 8) cd to the directory where you extracted EWA
-9) python -m pip install -r requirements.txt
+9) > python -m pip install -r requirements.txt
 10) For Oracle, see ORACLE.txt
 11) See README.txt for using it.
 

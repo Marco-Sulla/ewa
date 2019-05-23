@@ -26,16 +26,17 @@ Requires Python 3.4+, Spring Boot 1+, JDK 8+, sql2o 1.4+
 2) extract the files where you want
 3) Download Python3 from:
    https://www.python.org/downloads/#content
-   Do not download Python 3.7.x, pymsssql have problems with it
+   Do not download Python 3.7.x, pymsssql have problems with it.
+   I suggest you Python 3.6.x
 4) Install Python. 
    !!! Remember to check "Add Python to path" in the installer GUI !!!
-5) Open requirements.txt
-6) Open a cmd
-7) > pip install --upgrade setuptools
-8) For every entry in requirements.txt, install it with pip. For example:
-   > pip install cython==0.29.7
-9) For Oracle, see ORACLE.txt
-10) See README.txt for using it.
+5) Open a cmd
+6) > python -m pip install --upgrade pip
+7) > python -m pip install --upgrade setuptools
+8) cd to the directory where you extracted EWA
+9) python -m pip install -r requirements.txt
+10) For Oracle, see ORACLE.txt
+11) See README.txt for using it.
 
 Bye!
 

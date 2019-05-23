@@ -58,4 +58,4 @@ If you want to add a database, please open an issue:
 https://github.com/MarcoSulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+
 
 # License
-See LICENSE
+See LICENSE file

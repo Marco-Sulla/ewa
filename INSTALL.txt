@@ -1,9 +1,9 @@
 # Requirements
 Requires Python 3.4+, Spring Boot 1+, JDK 8+, sql2o 1.4+
 
-################################################################################
-#                                     LINUX                                    #
-################################################################################
+###########################################################
+#                          LINUX                          #
+###########################################################
 
 1) Download the project from https://github.com/MarcoSulla/ewa/releases
 2) extract the files where you want
@@ -18,9 +18,9 @@ Requires Python 3.4+, Spring Boot 1+, JDK 8+, sql2o 1.4+
 8) For Oracle, see ORACLE.txt
 9) See README.txt for using it.
 
-################################################################################
-#                                    WINDOWS                                   #
-################################################################################
+###########################################################
+#                         WINDOWS                         #
+###########################################################
 
 1) Download the project from https://github.com/MarcoSulla/ewa/releases
 2) extract the files where you want

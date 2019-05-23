@@ -39,8 +39,10 @@ See INSTALL.TXT
 1. Open a cmd or a shell
 2. Go to the folder where you extracted EWA
 3. Go to `src` folder
-4. Copy config_example.ini` in another .ini file, and edit it following its comments
-5. Launch in the shell: `> python3 ewa.py --config YOUR_CONFIG.ini`. If you have Windows, use `python` instead of `python3`
+4. Copy config_example.ini` in another .ini file, and edit it following its 
+   comments
+5. Launch in the shell: `> python3 ewa.py --config YOUR_CONFIG.ini`. If you 
+   have Windows, use `python` instead of `python3`
 6. Read and follow the instructions at the end of script launching
 
 # Tested databases
@@ -57,4 +59,3 @@ https://github.com/MarcoSulla/ewa/issues/new?assignees=&labels=&template=bug_rep
 
 # License
 See LICENSE
-

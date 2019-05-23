@@ -28,10 +28,13 @@ It auto generates, from a database table:
 See [`INSTALL.TXT`](https://raw.githubusercontent.com/Marco-Sulla/ewa/master/INSTALL.txt) . You can download the program at [Releases](https://github.com/Marco-Sulla/ewa/releases).
 
 # Use
-1. Go to `src` folder
-1. Create a `.ini` file. See [`config_example.ini`](https://raw.githubusercontent.com/Marco-Sulla/ewa/master/src/config_example.ini)
-2. `python3 ewa.py --config YOUR_CONFIG.ini`
-3. Read and follow the instructions at the end of script launching
+1. Open a cmd or a shell
+2. Go to the folder where you extracted EWA
+3. Go to `src` folder
+4. Copy [`config_example.ini`](https://raw.githubusercontent.com/Marco-Sulla/ewa/master/src/config_example.ini) in another 
+   .ini file, and edit it following its comments
+5. Launch in the shell: `> python3 ewa.py --config YOUR_CONFIG.ini`. If you have Windows, use `python` instead of `python3`
+6. Read and follow the instructions at the end of script launching
 
 # Tested databases
 Oracle 12C+, MSSQL 2012+. Not all field types are currently supported. Please [open an issue](https://github.com/Marco-Sulla/ewa/issues/new?assignees=&labels=&template=bug_report.md&title=%5BBUG%5D+) if you want me to add one.

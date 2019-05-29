@@ -58,10 +58,7 @@ class MssqlUtility(IDbUtility):
         else:
             raise Exception("Unsupported type: {}".format(sql_type))
     
-    @classmethod
-    @property
-    def get_columns_data_sql(cls):
-        return (
+    get_columns_data_sql = (
 """
 SELECT 
     column_name, 
@@ -75,4 +72,3 @@ WHERE upper(TABLE_NAME) = N'{}'
 ORDER BY column_name ASC
 """
         )
-

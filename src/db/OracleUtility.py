@@ -70,4 +70,3 @@ WHERE UPPER(table_name) = '{}'
 ORDER BY column_name ASC
 """
     )
-

@@ -219,7 +219,7 @@ class Config:
         idslist = idslist[:-2]
         self._idslist = idslist
         
-        site = "https://marcosulla.github.io/ewa/"
+        site = "https://marco-sulla.github.io/ewa/"
         self._site = site
         
         self._firm = (

@@ -111,6 +111,8 @@ class Config:
         self._pack_service = pack_service
         pack_utility = config.get("packages", "utility")
         self._pack_utility = pack_utility
+        pack_enum = config.get("packages", "enum")
+        self._pack_enum = pack_enum
     
         data_dir = app_dir / "data" / class_name
         self._data_dir = data_dir
@@ -324,6 +326,10 @@ class Config:
     @property
     def pack_utility(self):
         return self._pack_utility
+
+    @property
+    def pack_enum(self):
+        return self._pack_enum
 
     @property
     def data_dir(self):

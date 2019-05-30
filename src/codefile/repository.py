@@ -5,7 +5,6 @@ repo_tpl = (
 
 package {pack_repo};
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -250,18 +249,7 @@ save_update_tpl = """{indent}{indent}return this.update({varname}, false, con);"
 
 idkey_end_tpl = (
 """
-{indent}{indent}
-{indent}{indent}Object res_true;
-{indent}{indent}final Class<?> klass = {id_col_type}.class;
-{indent}{indent}
-{indent}{indent}if (res != null && (klass == Long.class || klass == BigDecimal.class)) {{
-{indent}{indent}{indent}res_true = ((BigDecimal) res).longValue();
-{indent}{indent}}}
-{indent}{indent}else {{
-{indent}{indent}{indent}res_true = res;
-{indent}{indent}}}
-{indent}{indent}
-{indent}{indent}{varname}.set{methid}(({id_col_type}) res_true);"""
+{indent}{indent}{varname}.set{methid}(res);"""
 )
 
 update_tpl = (
@@ -295,9 +283,7 @@ update_tpl = (
 {indent}"""
 )
 
-idkey_mssql_tpl = "{indent}{indent}Object res = key;"
-
-idkey_oracle_tpl = """{indent}{indent}final Object res = Sql2oUtility.getInsertedId("{table_name}", "{id0}", con, key, {id_col_type}.class);"""
+idkey_tpl = """{indent}{indent}final {id_col_type} res = Sql2oUtility.getInsertedId("{table_name}", "{id0}", con, key, {id_col_type}.class);"""
 
 select_fields_tpl = (
 """{indent}{indent}String res = "";
@@ -373,14 +359,11 @@ def write(config):
     idkey = ""
     
     if not config.multiple_ids:
-        if config.dtype == "mssql":
-            idkey = idkey_mssql_tpl.format(indent=config.indent)
-        elif config.dtype == "oracle":
-            idkey = idkey_oracle_tpl.format(
-                indent=config.indent,
-                id0=config.ids[0],
-                table_name=config.table_name,
-                id_col_type=config.id_col_type,
+        idkey = idkey_tpl.format(
+            indent=config.indent,
+            id0=config.ids[0],
+            table_name=config.table_name,
+            id_col_type=config.id_col_type,
             )
         
         idkey_end = idkey_end_tpl.format(
